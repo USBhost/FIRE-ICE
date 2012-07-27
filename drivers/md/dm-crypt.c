@@ -110,10 +110,6 @@ enum flags { DM_CRYPT_SUSPENDED, DM_CRYPT_KEY_VALID };
  */
 struct crypt_cpu {
 	struct ablkcipher_request *req;
-	struct crypto_ablkcipher *tfm;
-
-	/* ESSIV: struct crypto_cipher *essiv_tfm */
-	void *iv_private;
 };
 
 /*
@@ -148,16 +144,16 @@ struct crypt_config {
 	sector_t iv_offset;
 	unsigned int iv_size;
 
-	/* ESSIV: struct crypto_cipher *essiv_tfm */
-	void *iv_private;
-	struct crypto_ablkcipher **tfms;
-	unsigned tfms_count;
-
 	/*
 	 * Duplicated per cpu state. Access through
 	 * per_cpu_ptr() only.
 	 */
 	struct crypt_cpu __percpu *cpu;
+
+	/* ESSIV: struct crypto_cipher *essiv_tfm */
+	void *iv_private;
+	struct crypto_ablkcipher **tfms;
+	unsigned tfms_count;
 
 	/*
 	 * Layout of each crypto request:
@@ -199,7 +195,7 @@ static struct crypt_cpu *this_crypt_config(struct crypt_config *cc)
  */
 static struct crypto_ablkcipher *any_tfm(struct crypt_config *cc)
 {
-	return __this_cpu_ptr(cc->cpu)->tfm;
+	return cc->tfms[0];
 }
 
 /*
@@ -264,7 +260,7 @@ static int crypt_iv_essiv_init(struct crypt_config *cc)
 	struct hash_desc desc;
 	struct scatterlist sg;
 	struct crypto_cipher *essiv_tfm;
-	int err, cpu;
+	int err;
 
 	sg_init_one(&sg, cc->key, cc->key_size);
 	desc.tfm = essiv->hash_tfm;
@@ -274,14 +270,12 @@ static int crypt_iv_essiv_init(struct crypt_config *cc)
 	if (err)
 		return err;
 
-	for_each_possible_cpu(cpu) {
-		essiv_tfm = per_cpu_ptr(cc->cpu, cpu)->iv_private,
+	essiv_tfm = cc->iv_private;
 
-		err = crypto_cipher_setkey(essiv_tfm, essiv->salt,
-				    crypto_hash_digestsize(essiv->hash_tfm));
-		if (err)
-			return err;
-	}
+	err = crypto_cipher_setkey(essiv_tfm, essiv->salt,
+			    crypto_hash_digestsize(essiv->hash_tfm));
+	if (err)
+		return err;
 
 	return 0;
 }
@@ -292,16 +286,14 @@ static int crypt_iv_essiv_wipe(struct crypt_config *cc)
 	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
 	unsigned salt_size = crypto_hash_digestsize(essiv->hash_tfm);
 	struct crypto_cipher *essiv_tfm;
-	int cpu, r, err = 0;
+	int r, err = 0;
 
 	memset(essiv->salt, 0, salt_size);
 
-	for_each_possible_cpu(cpu) {
-		essiv_tfm = per_cpu_ptr(cc->cpu, cpu)->iv_private;
-		r = crypto_cipher_setkey(essiv_tfm, essiv->salt, salt_size);
-		if (r)
-			err = r;
-	}
+	essiv_tfm = cc->iv_private;
+	r = crypto_cipher_setkey(essiv_tfm, essiv->salt, salt_size);
+	if (r)
+		err = r;
 
 	return err;
 }
@@ -341,8 +333,6 @@ static struct crypto_cipher *setup_essiv_cpu(struct crypt_config *cc,
 
 static void crypt_iv_essiv_dtr(struct crypt_config *cc)
 {
-	int cpu;
-	struct crypt_cpu *cpu_cc;
 	struct crypto_cipher *essiv_tfm;
 	struct iv_essiv_private *essiv = &cc->iv_gen_private.essiv;
 
@@ -352,15 +342,12 @@ static void crypt_iv_essiv_dtr(struct crypt_config *cc)
 	kzfree(essiv->salt);
 	essiv->salt = NULL;
 
-	for_each_possible_cpu(cpu) {
-		cpu_cc = per_cpu_ptr(cc->cpu, cpu);
-		essiv_tfm = cpu_cc->iv_private;
+	essiv_tfm = cc->iv_private;
 
-		if (essiv_tfm)
-			crypto_free_cipher(essiv_tfm);
+	if (essiv_tfm)
+		crypto_free_cipher(essiv_tfm);
 
-		cpu_cc->iv_private = NULL;
-	}
+	cc->iv_private = NULL;
 }
 
 static int crypt_iv_essiv_ctr(struct crypt_config *cc, struct dm_target *ti,
@@ -369,7 +356,7 @@ static int crypt_iv_essiv_ctr(struct crypt_config *cc, struct dm_target *ti,
 	struct crypto_cipher *essiv_tfm = NULL;
 	struct crypto_hash *hash_tfm = NULL;
 	u8 *salt = NULL;
-	int err, cpu;
+	int err;
 
 	if (!opts) {
 		ti->error = "Digest algorithm missing for ESSIV mode";
@@ -394,15 +381,13 @@ static int crypt_iv_essiv_ctr(struct crypt_config *cc, struct dm_target *ti,
 	cc->iv_gen_private.essiv.salt = salt;
 	cc->iv_gen_private.essiv.hash_tfm = hash_tfm;
 
-	for_each_possible_cpu(cpu) {
-		essiv_tfm = setup_essiv_cpu(cc, ti, salt,
-					crypto_hash_digestsize(hash_tfm));
-		if (IS_ERR(essiv_tfm)) {
-			crypt_iv_essiv_dtr(cc);
-			return PTR_ERR(essiv_tfm);
-		}
-		per_cpu_ptr(cc->cpu, cpu)->iv_private = essiv_tfm;
+	essiv_tfm = setup_essiv_cpu(cc, ti, salt,
+				crypto_hash_digestsize(hash_tfm));
+	if (IS_ERR(essiv_tfm)) {
+		crypt_iv_essiv_dtr(cc);
+		return PTR_ERR(essiv_tfm);
 	}
+	cc->iv_private = essiv_tfm;
 
 	return 0;
 
@@ -416,7 +401,7 @@ bad:
 static int crypt_iv_essiv_gen(struct crypt_config *cc, u8 *iv,
 			      struct dm_crypt_request *dmreq)
 {
-	struct crypto_cipher *essiv_tfm = this_crypt_config(cc)->iv_private;
+	struct crypto_cipher *essiv_tfm = cc->iv_private;
 
 	memset(iv, 0, cc->iv_size);
 	*(__le64 *)iv = cpu_to_le64(dmreq->iv_sector);
@@ -755,11 +740,12 @@ static void crypt_alloc_req(struct crypt_config *cc,
 			    struct convert_context *ctx)
 {
 	struct crypt_cpu *this_cc = this_crypt_config(cc);
+	unsigned key_index = ctx->cc_sector & (cc->tfms_count - 1);
 
 	if (!this_cc->req)
 		this_cc->req = mempool_alloc(cc->req_pool, GFP_NOIO);
 
-	ablkcipher_request_set_tfm(this_cc->req, this_cc->tfm);
+	ablkcipher_request_set_tfm(this_cc->req, cc->tfms[key_index]);
 	ablkcipher_request_set_callback(this_cc->req,
 	    CRYPTO_TFM_REQ_MAY_BACKLOG | CRYPTO_TFM_REQ_MAY_SLEEP,
 	    kcryptd_async_done, dmreq_of_req(cc, this_cc->req));
@@ -1265,13 +1251,37 @@ static void crypt_free_tfms(struct crypt_config *cc)
 	cc->tfms = NULL;
 }
 
+static int crypt_alloc_tfms(struct crypt_config *cc, char *ciphermode)
+{
+	unsigned i;
+	int err;
+
+	cc->tfms = kmalloc(cc->tfms_count * sizeof(struct crypto_ablkcipher *),
+			   GFP_KERNEL);
+	if (!cc->tfms)
+		return -ENOMEM;
+
+	for (i = 0; i < cc->tfms_count; i++) {
+		cc->tfms[i] = crypto_alloc_ablkcipher(ciphermode, 0, 0);
+		if (IS_ERR(cc->tfms[i])) {
+			err = PTR_ERR(cc->tfms[i]);
+			crypt_free_tfms(cc);
+			return err;
+		}
+	}
+
+	return 0;
+}
+
 static int crypt_setkey_allcpus(struct crypt_config *cc)
 {
-	int cpu, err = 0, r;
+	unsigned subkey_size = cc->key_size >> ilog2(cc->tfms_count);
+	int err = 0, i, r;
 
-	for_each_possible_cpu(cpu) {
-		r = crypto_ablkcipher_setkey(per_cpu_ptr(cc->cpu, cpu)->tfm,
-					       cc->key, cc->key_size);
+	for (i = 0; i < cc->tfms_count; i++) {
+		r = crypto_ablkcipher_setkey(cc->tfms[i],
+					     cc->key + (i * subkey_size),
+					     subkey_size);
 		if (r)
 			err = r;
 	}
@@ -1335,8 +1345,6 @@ static void crypt_dtr(struct dm_target *ti)
 			cpu_cc = per_cpu_ptr(cc->cpu, cpu);
 			if (cpu_cc->req)
 				mempool_free(cpu_cc->req, cc->req_pool);
-			if (cpu_cc->tfm)
-				crypto_free_ablkcipher(cpu_cc->tfm);
 		}
 
 	crypt_free_tfms(cc);
@@ -1371,10 +1379,9 @@ static int crypt_ctr_cipher(struct dm_target *ti,
 			    char *cipher_in, char *key)
 {
 	struct crypt_config *cc = ti->private;
-	struct crypto_ablkcipher *tfm;
 	char *tmp, *cipher, *chainmode, *ivmode, *ivopts, *keycount;
 	char *cipher_api = NULL;
-	int cpu, ret = -EINVAL;
+	int ret = -EINVAL;
 	char dummy;
 
 	/* Convert to crypto api definition? */
@@ -1415,7 +1422,8 @@ static int crypt_ctr_cipher(struct dm_target *ti,
 	if (tmp)
 		DMWARN("Ignoring unexpected additional cipher options");
 
-	cc->cpu = alloc_percpu(struct crypt_cpu);
+	cc->cpu = __alloc_percpu(sizeof(*(cc->cpu)),
+				 __alignof__(struct crypt_cpu));
 	if (!cc->cpu) {
 		ti->error = "Cannot allocate per cpu state";
 		goto bad_mem;
@@ -1447,14 +1455,10 @@ static int crypt_ctr_cipher(struct dm_target *ti,
 	}
 
 	/* Allocate cipher */
-	for_each_possible_cpu(cpu) {
-		tfm = crypto_alloc_ablkcipher(cipher_api, 0, 0);
-		if (IS_ERR(tfm)) {
-			ret = PTR_ERR(tfm);
-			ti->error = "Error allocating crypto tfm";
-			goto bad;
-		}
-		per_cpu_ptr(cc->cpu, cpu)->tfm = tfm;
+	ret = crypt_alloc_tfms(cc, cipher_api);
+	if (ret < 0) {
+		ti->error = "Error allocating crypto tfm";
+		goto bad;
 	}
 
 	/* Initialize and set key */
