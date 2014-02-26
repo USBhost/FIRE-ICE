@@ -91,8 +91,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			 + nvmap_page_pool_get_unused_pages()
 #endif
 			 ;
-	int other_file = global_page_state(NR_FILE_PAGES) -
-						global_page_state(NR_SHMEM);
+	int other_file = global_page_state(NR_FILE_PAGES)
+						- global_page_state(NR_SHMEM)
+						- total_swapcache_pages();
 
 	si_swapinfo(&swap_info);
 	other_free += swap_info.freeswap;
