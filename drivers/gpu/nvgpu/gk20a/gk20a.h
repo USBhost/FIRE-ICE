@@ -198,6 +198,24 @@ struct gpu_ops {
 		int (*get_netlist_name)(int index, char *name);
 		bool (*is_fw_defined)(void);
 	} gr_ctx;
+	struct {
+		const struct regop_offset_range* (
+				*get_global_whitelist_ranges)(void);
+		int (*get_global_whitelist_ranges_count)(void);
+		const struct regop_offset_range* (
+				*get_context_whitelist_ranges)(void);
+		int (*get_context_whitelist_ranges_count)(void);
+		const u32* (*get_runcontrol_whitelist)(void);
+		int (*get_runcontrol_whitelist_count)(void);
+		const struct regop_offset_range* (
+				*get_runcontrol_whitelist_ranges)(void);
+		int (*get_runcontrol_whitelist_ranges_count)(void);
+		const u32* (*get_qctl_whitelist)(void);
+		int (*get_qctl_whitelist_count)(void);
+		const struct regop_offset_range* (
+				*get_qctl_whitelist_ranges)(void);
+		int (*get_qctl_whitelist_ranges_count)(void);
+	} regops;
 };
 
 struct gk20a {
