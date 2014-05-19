@@ -1856,11 +1856,14 @@ static void palams_regulators_shutdown(struct platform_device *pdev)
 	struct palmas *palmas = dev_get_drvdata(pdev->dev.parent);
 	struct palmas_pmic *pmic = platform_get_drvdata(pdev);
 	int id;
+	mutex_lock(&palmas->pmic->mutex);
 
 	for (id = 0; id < PALMAS_NUM_REGS; id++) {
 		if (!pmic->disable_pull_down[id])
 			palams_rail_pd_control(palmas, id, false);
 	}
+	palmas->pmic->shutdown = true;
+	mutex_unlock(&palmas->pmic->mutex);
 }
 
 static struct of_device_id of_palmas_match_tbl[] = {
