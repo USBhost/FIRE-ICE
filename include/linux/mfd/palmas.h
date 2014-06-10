@@ -370,7 +370,7 @@ struct palmas_reg_init {
 	 */
 	bool disable_active_discharge_idle;
 
-	/* Disable pull down fro LDO */
+	/* Disable pull down for SMPS/LDO */
 	bool disable_pull_down;
 };
 
@@ -744,9 +744,9 @@ struct palmas_pmic {
 	unsigned int current_reg_mode[PALMAS_REG_SMPS10_OUT1];
 	unsigned long config_flags[PALMAS_NUM_REGS];
 	bool disable_active_discharge_idle[PALMAS_NUM_REGS];
-
 	bool disable_smps10_in_suspend;
 	unsigned int smps10_ctrl_reg;
+	bool disable_pull_down[PALMAS_NUM_REGS];
 };
 
 struct palmas_resource {
