@@ -1063,6 +1063,7 @@ struct pmu_gk20a {
 		struct pmu_cmdline_args_v0 args_v0;
 		struct pmu_cmdline_args_v1 args_v1;
 	};
+	u32 aelpg_param[5];
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);
@@ -1092,5 +1093,10 @@ int gk20a_pmu_debugfs_init(struct platform_device *dev);
 void gk20a_pmu_reset_load_counters(struct gk20a *g);
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 		u32 *total_cycles);
+
+int gk20a_pmu_ap_send_command(struct gk20a *g,
+		union pmu_ap_cmd *p_ap_cmd, bool b_block);
+int gk20a_aelpg_init(struct gk20a *g);
+int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 
 #endif /*__PMU_GK20A_H__*/
