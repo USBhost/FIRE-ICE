@@ -243,6 +243,8 @@ struct gk20a {
 	bool aelpg_enabled;
 	bool forced_idle;
 
+	u32 emc3d_ratio;
+
 #ifdef CONFIG_DEBUG_FS
 	spinlock_t debugfs_lock;
 	struct dentry *debugfs_ltc_enabled;
