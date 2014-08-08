@@ -559,6 +559,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_force_idle);
 	device_remove_file(dev, &dev_attr_aelpg_param);
 	device_remove_file(dev, &dev_attr_aelpg_enable);
+	device_remove_file(dev, &dev_attr_allow_all);
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)
@@ -579,6 +580,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_force_idle);
 	error |= device_create_file(&dev->dev, &dev_attr_aelpg_param);
 	error |= device_create_file(&dev->dev, &dev_attr_aelpg_enable);
+	error |= device_create_file(&dev->dev, &dev_attr_allow_all);
 
 	if (error)
 		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");
