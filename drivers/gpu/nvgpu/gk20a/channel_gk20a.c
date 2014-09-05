@@ -708,9 +708,13 @@ unbind:
 int gk20a_channel_release(struct inode *inode, struct file *filp)
 {
 	struct channel_gk20a *ch = (struct channel_gk20a *)filp->private_data;
-	struct gk20a *g = ch->g;
+	struct gk20a *g;
 	int err;
 
+	if (!ch || !ch->g)
+		return -EFAULT;
+
+	g = ch->g;
 	trace_gk20a_channel_release(dev_name(&g->dev->dev));
 
 	err = gk20a_busy(ch->g->dev);
