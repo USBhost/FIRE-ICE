@@ -41,7 +41,6 @@ obj-$(CONFIG_DEBUG_FS) += clocks_stats.o
 obj-y += tegra_core_volt_cap.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += wakeups-t12x.o
 
-
 obj-y += kfuse.o
 obj-y += apbio.o
 obj-$(CONFIG_FIQ) += fiq.o
@@ -51,8 +50,17 @@ obj-y += powergate-ops-txx.o
 obj-y += powergate-ops-t1xx.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += powergate-t12x.o
 
-obj-y += dvfs.o
-obj-$(CONFIG_ARCH_TEGRA_13x_SOC) += tegra13_dvfs.o
+obj-$(CONFIG_TEGRA_CLK_FRAMEWORK) += dvfs_link.o
+ifeq ($(CONFIG_TEGRA_CLK_FRAMEWORK),y)
+obj-$(CONFIG_ARCH_TEGRA_13x_SOC) += tegra13_dvfs_link.o
+
+# FIXME: Bug 1211919:
+# Remove CFLAGS_tegra21_dvfs.o flag when tegra21_dvfs.c becomes
+# stabilized.
+CFLAGS_tegra21_dvfs.o = -Werror -Wno-unused-function -Wno-unused-variable
+
+obj-$(CONFIG_ARCH_TEGRA_21x_SOC) += tegra21_dvfs.o
+endif
 obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra.o
 ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
 ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
@@ -82,9 +90,11 @@ obj-y += flowctrl.o
 obj-y += reset.o
 obj-$(CONFIG_DEBUG_ICEDCC) += sysfs-dcc.o
 obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster.o
-obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS) += tegra_cl_dvfs.o
-
 obj-$(CONFIG_TEGRA_PCI) += pcie.o
+obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster.o
+ifeq ($(CONFIG_TEGRA_CLK_FRAMEWORK),y)
+obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS) += tegra_cl_dvfs_link.o
+endif
 
 ifeq ($(CONFIG_TEGRA_SOCTHERM),y)
 obj-$(CONFIG_ARCH_TEGRA_13x_SOC) += tegra11_soctherm.o
