@@ -40,7 +40,8 @@
 
 #include "clock.h"
 #include "cpu-tegra.h"
-#include "dvfs.h"
+#include <linux/platform/tegra/dvfs.h>
+
 
 /* tegra throttling and edp governors require frequencies in the table
    to be in ascending order */

@@ -20,6 +20,7 @@
 #include <linux/hrtimer.h>
 #include <linux/module.h>
 #include <mach/edp.h>
+#include <linux/platform/tegra/dvfs.h>
 #include "cpu-tegra.h"
 
 #define WATCHDOG_TIMER_RATE		3900000 /* 1hr5min in msecs */

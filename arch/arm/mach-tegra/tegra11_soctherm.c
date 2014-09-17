@@ -46,7 +46,8 @@
 #include "tegra11_soctherm.h"
 #include "gpio-names.h"
 #include "common.h"
-#include "dvfs.h"
+#include "board-ardbeg.h"
+#include <linux/platform/tegra/dvfs.h>
 
 static const int MAX_HIGH_TEMP = 127000;
 static const int MIN_LOW_TEMP = -127000;

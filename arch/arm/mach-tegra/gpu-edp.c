@@ -29,7 +29,7 @@
 
 #include <mach/edp.h>
 
-#include "dvfs.h"
+#include <linux/platform/tegra/dvfs.h>
 #include "clock.h"
 #include "common.h"
 
