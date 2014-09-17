@@ -38,7 +38,7 @@
 #include <mach/pinmux-t12.h>
 
 #include "pm.h"
-#include "dvfs.h"
+#include <linux/platform/tegra/dvfs.h>
 #include "board.h"
 #include "common.h"
 #include "tegra-board-id.h"
@@ -48,8 +48,8 @@
 #include "board-pmu-defines.h"
 #include "devices.h"
 #include "iomap.h"
-#include "tegra_cl_dvfs.h"
 #include "tegra11_soctherm.h"
+#include <linux/platform/tegra/tegra_cl_dvfs.h>
 
 #define E1735_EMULATE_E1767_SKU	1001
 static u32 tegra_chip_id;
