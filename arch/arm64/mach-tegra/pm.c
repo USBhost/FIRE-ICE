@@ -73,7 +73,7 @@
 #include <mach/tegra_smmu.h>
 
 #include "board.h"
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "common.h"
 #include "iomap.h"
 #include "pm.h"

@@ -37,7 +37,7 @@
 
 #include "iomap.h"
 #include "board.h"
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "board-p2360.h"
 #include "devices.h"
 #include "board-common.h"

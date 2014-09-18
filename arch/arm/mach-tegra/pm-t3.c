@@ -42,7 +42,7 @@
 #include <asm/smp_plat.h>
 #include <asm/cputype.h>
 
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "iomap.h"
 #include "pm.h"
 #include "sleep.h"

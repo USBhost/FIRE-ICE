@@ -40,7 +40,7 @@
 #include <mach/pinmux.h>
 
 #include <linux/platform/tegra/tegra_cl_dvfs.h>
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include <linux/platform/tegra/dvfs.h>
 #include "iomap.h"
 #include "tegra_simon.h"

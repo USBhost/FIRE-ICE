@@ -22,6 +22,8 @@
 #include <mach/edp.h>
 #include <linux/platform/tegra/dvfs.h>
 #include "cpu-tegra.h"
+#include <linux/platform/tegra/clock.h>
+
 
 #define WATCHDOG_TIMER_RATE		3900000 /* 1hr5min in msecs */
 #define CPU_THERMAL_ZONE_TYPE		"CPU-therm"
