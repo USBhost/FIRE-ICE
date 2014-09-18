@@ -76,7 +76,7 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "iomap.h"
 #include "sleep.h"
 #include "pm.h"

@@ -90,7 +90,7 @@
 #include "board-common.h"
 #include "board-touch-raydium.h"
 #include "board-touch-maxim_sti.h"
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "common.h"
 #include "devices.h"
 #include "gpio-names.h"

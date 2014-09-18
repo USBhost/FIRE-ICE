@@ -20,7 +20,7 @@
 #include <mach/latency_allowance.h>
 #include <mach/tegra_emc.h>
 #include "la_priv.h"
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "iomap.h"
 
 
