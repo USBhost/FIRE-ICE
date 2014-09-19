@@ -41,9 +41,9 @@
 #include "board-p2360.h"
 #include "devices.h"
 #include "board-common.h"
-#include "common.h"
-
 #include <asm/mach-types.h>
+#include <linux/platform/tegra/common.h>
+
 #include "tegra-of-dev-auxdata.h"
 
 static struct board_info board_info, display_board_info;

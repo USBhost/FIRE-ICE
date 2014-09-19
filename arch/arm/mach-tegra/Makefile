@@ -4,7 +4,6 @@ asflags-y				+= -march=armv7-a
 subdir-ccflags-y := -Werror
 
 obj-y                                   += ahb.o
-obj-y                                   += common.o
 obj-y                                   += devices.o
 obj-y                                   += board-info.o
 obj-y                                   += io.o
@@ -22,7 +21,6 @@ ifeq ($(CONFIG_CPU_IDLE),y)
 obj-$(CONFIG_PM_SLEEP)                  += cpuidle-t2.o
 endif
 else
-obj-y                                   += pm-t3.o
 obj-y                                   += sleep-t30.o
 obj-y                                   += tegra_core_volt_cap.o
 obj-$(CONFIG_TEGRA_USE_SIMON)           += tegra_simon.o
@@ -84,14 +82,10 @@ obj-y					+= tegra_emc.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)		+= tegra20_speedo.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)		+= tegra30_speedo.o
 obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
-obj-y                                   += flowctrl.o
 obj-$(CONFIG_CPU_IDLE)                  += cpuidle.o
 obj-$(CONFIG_CPU_IDLE)                  += sleep.o
 obj-$(CONFIG_SMP)                       += platsmp.o
-obj-y                                   += reset.o
 obj-y                                   += headsmp.o
-obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra.o
-ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
 ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += cpuquiet.o
 else
@@ -105,7 +99,6 @@ ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE),y)
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra3_throttle.o
 endif
 obj-$(CONFIG_DEBUG_ICEDCC)              += sysfs-dcc.o
-obj-$(CONFIG_TEGRA_CLUSTER_CONTROL)     += sysfs-cluster.o
 obj-$(CONFIG_TEGRA_DYNAMIC_PWRDET)      += powerdetect.o
 
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += board-dt-tegra20.o
