@@ -28,18 +28,27 @@ asflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
 
 
 obj-y += ahb.o
-obj-y += common.o
-obj-y += devices.o
+
+# FIXME: Bug 1211919:
+# Remove CFLAGS_common_link.o flag for common.o when common.c
+# becomes stabilized for t210.
+
+ifeq ($(CONFIG_ARCH_TEGRA_21x_SOC),y)
+CFLAGS_common_link.o = -Werror -Wno-unused-function
+endif
+
+obj-$(CONFIG_TEGRA_COMMON) += common_link.o
+obj-$(CONFIG_TEGRA_DEVICES) += devices.o
 obj-y += io.o
 obj-y += clock.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra12_clocks.o
 
 obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o
 
-obj-y += pm-t3.o
-obj-$(CONFIG_DEBUG_FS) += clocks_stats.o
-obj-y += tegra_core_volt_cap.o
-obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += wakeups-t12x.o
+obj-$(CONFIG_TEGRA3_PM) += pm-t3_link.o
+obj-$(CONFIG_TEGRA_CORE_VOLT_CAP) += tegra_core_volt_cap.o
+obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += wakeups-t12x_link.o
+obj-$(CONFIG_ARCH_TEGRA_21x_SOC) += wakeups-t21x.o
 
 
 obj-y += kfuse.o
@@ -52,7 +61,7 @@ obj-y += powergate-ops-t1xx.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += powergate-t12x.o
 
 obj-y += dvfs.o
-obj-$(CONFIG_TEGRA_CLK_FRAMEWORK) += clock.o
+obj-y += clock.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra12_clocks.o
 obj-$(CONFIG_DEBUG_FS) += clocks_stats.o
 obj-$(CONFIG_ARCH_TEGRA_13x_SOC) += tegra13_dvfs.o
@@ -69,6 +78,10 @@ endif
 obj-y += latency_allowance.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra12x_la.o
 
+obj-$(CONFIG_ARCH_TEGRA_21x_SOC) += tegra21_dvfs.o
+endif
+obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra_link.o
+
 obj-$(CONFIG_ARCH_TEGRA_13x_SOC)        += tegra13_speedo.o
 
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra3_actmon.o
@@ -79,15 +92,17 @@ obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra12_emc.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra_emc_dt_parse.o
 obj-y += tegra_emc_therm.o
 
-obj-$(CONFIG_TEGRA_MC_DOMAINS) += pm_domains.o
 
-obj-y += flowctrl.o
-obj-y += reset.o
-obj-$(CONFIG_DEBUG_ICEDCC) += sysfs-dcc.o
-obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster.o
 obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS) += tegra_cl_dvfs.o
 
 obj-$(CONFIG_TEGRA_PCI) += pcie.o
+
+obj-$(CONFIG_TEGRA_MC_DOMAINS) += pm_domains.o
+obj-y += reset.o
+obj-y += flowctrl_link.o
+obj-$(CONFIG_DEBUG_ICEDCC) += sysfs-dcc.o
+obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster_link.o
+obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster_link.o
 
 ifeq ($(CONFIG_TEGRA_SOCTHERM),y)
 obj-$(CONFIG_ARCH_TEGRA_13x_SOC) += tegra11_soctherm.o
