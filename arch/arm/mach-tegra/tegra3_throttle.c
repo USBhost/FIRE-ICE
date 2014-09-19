@@ -30,7 +30,7 @@
 #include <mach/thermal.h>
 
 #include <linux/platform/tegra/clock.h>
-#include "cpu-tegra.h"
+#include <linux/platform/tegra/cpu-tegra.h>
 
 /* cpu_throttle_lock is tegra_cpu_lock from cpu-tegra.c */
 static struct mutex *cpu_throttle_lock;

@@ -27,7 +27,7 @@
 #include <mach/thermal.h>
 
 #include <linux/platform/tegra/clock.h>
-#include "common.h"
+#include <linux/platform/tegra/common.h>
 
 static DEFINE_MUTEX(core_edp_lock);
 

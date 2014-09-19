@@ -43,7 +43,7 @@
 #include "gpio-names.h"
 #include "board-ardbeg.h"
 #include "board-panel.h"
-#include "common.h"
+#include <linux/platform/tegra/common.h>
 #include "iomap.h"
 #include "tegra12_host1x_devices.h"
 #include <linux/platform/tegra/dvfs.h>

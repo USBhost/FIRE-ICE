@@ -45,8 +45,9 @@
 #include "devices.h"
 #include "tegra12_emc.h"
 #include <linux/platform/tegra/tegra_cl_dvfs.h>
-#include "cpu-tegra.h"
 #include "tegra11_soctherm.h"
+#include <linux/platform/tegra/cpu-tegra.h>
+
 
 #define RST_DEVICES_L			0x004
 #define RST_DEVICES_H			0x008

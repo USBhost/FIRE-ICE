@@ -44,8 +44,9 @@
 #include "iomap.h"
 #include "tegra12_emc.h"
 #include "tegra_emc_dt_parse.h"
-#include "devices.h"
-#include "common.h"
+#include "../../../../arch/arm/mach-tegra/devices.h"
+#include <linux/platform/tegra/common.h>
+
 
 #ifdef CONFIG_TEGRA_EMC_SCALING_ENABLE
 static bool emc_enable = true;

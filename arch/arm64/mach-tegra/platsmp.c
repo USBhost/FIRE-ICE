@@ -26,7 +26,8 @@
 #include <asm/smp_plat.h>
 #include <asm/soc.h>
 
-#include "common.h"
+#include <linux/platform/tegra/common.h>
+#include <linux/platform/tegra/reset.h>
 #include "pm-soc.h"
 
 void (*tegra_boot_secondary_cpu)(int cpu);

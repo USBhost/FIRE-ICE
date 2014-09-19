@@ -47,7 +47,7 @@
 #include <media/tegra_v4l2_camera.h>
 #include <linux/generic_adc_thermal.h>
 
-#include "cpu-tegra.h"
+#include <linux/platform/tegra/cpu-tegra.h>
 #include "devices.h"
 #include "board.h"
 #include "board-common.h"

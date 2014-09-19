@@ -21,7 +21,7 @@
 #include <linux/module.h>
 #include <mach/edp.h>
 #include <linux/platform/tegra/dvfs.h>
-#include "cpu-tegra.h"
+#include <linux/platform/tegra/cpu-tegra.h>
 #include <linux/platform/tegra/clock.h>
 
 
