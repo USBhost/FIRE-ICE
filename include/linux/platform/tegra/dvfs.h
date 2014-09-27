@@ -166,6 +166,8 @@ struct dvfs {
 	int num_freqs;
 	struct dvfs_dfll_data dfll_data;
 	bool therm_dvfs;
+	/* Maximum rate safe at minimum voltage across all thermal ranges */
+	unsigned long therm_safe_fmax;
 
 	int cur_millivolts;
 	unsigned long cur_rate;
