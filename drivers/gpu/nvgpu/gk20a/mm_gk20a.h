@@ -264,6 +264,16 @@ struct vm_gk20a {
 	bool tlb_dirty;
 	bool mapped;
 
+	u32 compression_page_size;
+	u32 big_page_size;
+	u32 pde_stride;
+	u32 pde_stride_shift;
+
+	struct {
+		u32 order;
+		u32 num_ptes;
+	} page_table_sizing[gmmu_nr_page_sizes];
+
 	struct kref ref;
 
 	struct mutex update_gmmu_lock;
@@ -278,6 +288,8 @@ struct vm_gk20a {
 	dma_addr_t zero_page_iova;
 	void *zero_page_cpuva;
 	struct sg_table *zero_page_sgt;
+
+	u32 gmmu_page_sizes[gmmu_nr_page_sizes];
 };
 
 struct gk20a;
@@ -292,17 +304,6 @@ void gk20a_mm_l2_invalidate(struct gk20a *g);
 
 struct mm_gk20a {
 	struct gk20a *g;
-
-	u32 compression_page_size;
-	u32 big_page_size;
-	u32 pde_stride;
-	u32 pde_stride_shift;
-
-	struct {
-		u32 order;
-		u32 num_ptes;
-	} page_table_sizing[gmmu_nr_page_sizes];
-
 
 	struct {
 		u64 size;
