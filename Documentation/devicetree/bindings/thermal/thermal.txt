@@ -99,6 +99,24 @@ Required properties:
 	"critical":	Hardware not reliable.
   Type: string
 
+Optional property:
+- writable:			boolean to enable writability for the trip temperature and
+            the trip hysteresis.
+
+* Thermal zone parameters
+
+The thermal-zone-params node is a node to specify additional thermal zone
+parameters such as governor name and specific governor parameters. All these
+paramters are optional and listed below.
+
+Optional property:
+- governor-name:	A string specifying name of the thermal governor to bind
+  Type: string		to the thermal zone to control throttling with any
+			'passive' cooling device bound to a trip point. Thermal
+			framework supports many governors and each of these may
+			have additional parameters that are parsed by a governor
+			specific parse-params routine in of-thermal.c
+
 * Cooling device maps
 
 The cooling device maps node is a node to describe how cooling devices
