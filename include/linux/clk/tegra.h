@@ -162,7 +162,7 @@ int tegra_dvfs_override_core_voltage(struct clk *c, int override_mv);
 int tegra_dvfs_predict_millivolts(struct clk *c, unsigned long rate);
 int tegra_dvfs_set_fmax_at_vmin(struct clk *c, unsigned long f_max, int v_min);
 /* Get max rate safe at min voltage in all t-ranges; return zero if unknown */
-unsigned long tegra_dvfs_get_therm_safe_fmax(struct clk *c);
+unsigned long tegra_dvfs_get_fmax_at_vmin_safe_t(struct clk *c);
 
 unsigned long clk_get_rate_all_locked(struct clk *c);
 int tegra_dvfs_rail_disable_by_name(const char *reg_id);
