@@ -41,9 +41,6 @@
 
 #include "mm.h"
 
-static unsigned long phys_initrd_start __initdata = 0;
-static unsigned long phys_initrd_size __initdata = 0;
-
 /* FIXME */
 #ifndef CONFIG_MACH_EXUMA
 phys_addr_t memstart_addr __read_mostly = 0;
