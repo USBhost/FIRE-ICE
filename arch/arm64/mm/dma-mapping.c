@@ -1282,28 +1282,6 @@ static size_t pg_iommu_unmap(struct dma_iommu_mapping *mapping,
 	return iommu_unmap(domain, iova, len);
 }
 
-static int pg_iommu_map_pages(struct dma_iommu_mapping *mapping, unsigned long iova,
-		    struct page **pages, size_t count, unsigned long prot)
-{
-	int err;
-	struct dma_attrs *attrs = (struct dma_attrs *)prot;
-	struct iommu_domain *domain = mapping->domain;
-	bool need_prefetch_page = !!iommu_get_num_pf_pages(mapping, attrs);
-
-	if (need_prefetch_page) {
-		err = iommu_map(domain, iova + (count << PAGE_SHIFT),
-				iova_gap_phys, PF_PAGES_SIZE, prot);
-		if (err)
-			return err;
-	}
-
-	err = iommu_map_pages(domain, iova, pages, count, prot);
-	if (err && need_prefetch_page)
-		iommu_unmap(domain, iova + (count << PAGE_SHIFT), PF_PAGES_SIZE);
-
-	return err;
-}
-
 static int pg_iommu_map_sg(struct dma_iommu_mapping *mapping, unsigned long iova,
 		 struct scatterlist *sgl, int nents, unsigned long prot)
 {
@@ -2160,31 +2138,6 @@ static dma_addr_t arm_iommu_map_page_at(struct device *dev, struct page *page,
 	return dma_addr + offset;
 }
 
-static dma_addr_t arm_iommu_map_pages(struct device *dev, struct page **pages,
-				  dma_addr_t dma_handle, size_t count,
-				  enum dma_data_direction dir,
-				  struct dma_attrs *attrs)
-{
-	struct dma_iommu_mapping *mapping = dev->archdata.mapping;
-	int ret;
-
-	if (!dma_get_attr(DMA_ATTR_SKIP_CPU_SYNC, attrs)) {
-		int i;
-
-		for (i = 0; i < count; i++)
-			__dma_page_cpu_to_dev(pages[i], 0, PAGE_SIZE, dir);
-	}
-
-	ret = pg_iommu_map_pages(mapping, dma_handle, pages, count,
-				 (ulong)attrs);
-	if (ret < 0)
-		return DMA_ERROR_CODE;
-
-	trace_dmadebug_map_page(dev, dma_handle, count * PAGE_SIZE, *pages);
-	return dma_handle;
-}
-
-
 /**
  * arm_coherent_iommu_unmap_page
  * @dev: valid struct device pointer
@@ -2299,7 +2252,6 @@ struct dma_map_ops iommu_ops = {
 	.mapping_error	= arm_iommu_mapping_error,
 
 	.map_page		= arm_iommu_map_page,
-	.map_pages		= arm_iommu_map_pages,
 	.map_page_at		= arm_iommu_map_page_at,
 	.unmap_page		= arm_iommu_unmap_page,
 	.sync_single_for_cpu	= arm_iommu_sync_single_for_cpu,
