@@ -1428,6 +1428,9 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	gk20a_dbg_fn("");
 
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
+		gk20a_scale_exit(dev);
+
 	if (g->remove_support)
 		g->remove_support(dev);
 
