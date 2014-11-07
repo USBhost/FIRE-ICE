@@ -127,7 +127,7 @@ static struct tegra_edp_cpu_powermodel_params t13x_cpu_powermodel_params[] = {
 	{
 		.cpu_speedo_id = 1, /* array-index[0] is DSC */
 		.common = EDP_PARAMS_COMMON_PART,
-		.safety_cap = { 2500000, 2300000, },
+		.safety_cap = { 2500000, 2500000, },
 	},
 	{
 		.cpu_speedo_id = 1, /* array-index[1] is MID */
