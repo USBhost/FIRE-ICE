@@ -146,6 +146,8 @@ ifneq ($(CONFIG_BCMDHD_SDIO),)
 
 # bcn_timeout
   DHDCFLAGS += -DCUSTOM_BCN_TIMEOUT_SETTING=5
+# debug info
+  DHDCFLAGS += -DDHD_WAKE_STATUS
 endif
 
 ifneq ($(CONFIG_BCMDHD_PCIE),)
@@ -163,6 +165,7 @@ ifneq ($(CONFIG_ARCH_MSM),)
   DHDCFLAGS += -DMSM_PCIE_LINKDOWN_RECOVERY
 endif
 
+  DHDCFLAGS += -DDONGLE_ENABLE_ISOLATION
 endif
 endif
 
