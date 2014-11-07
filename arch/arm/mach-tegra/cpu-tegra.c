@@ -87,7 +87,7 @@ static struct kernel_param_ops policy_ops = {
 module_param_cb(force_policy_max, &policy_ops, &force_policy_max, 0644);
 
 
-static unsigned int cpu_user_cap;
+static unsigned int cpu_user_cap = 2295000;
 
 static inline void _cpu_user_cap_set_locked(void)
 {

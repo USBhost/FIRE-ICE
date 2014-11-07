@@ -453,6 +453,8 @@ static struct thermal_zone_params therm_est_activ_tzp = {
 static struct throttle_table cpu_throttle_table[] = {
 	/* CPU_THROT_LOW cannot be used by other than CPU */
 	/*      CPU,    GPU,  C2BUS,  C3BUS,   SCLK,    EMC   */
+	{ { 2499000, NO_CAP, NO_CAP, NO_CAP, NO_CAP, NO_CAP } },
+	{ { 2397000, NO_CAP, NO_CAP, NO_CAP, NO_CAP, NO_CAP } },
 	{ { 2295000, NO_CAP, NO_CAP, NO_CAP, NO_CAP, NO_CAP } },
 	{ { 2269500, NO_CAP, NO_CAP, NO_CAP, NO_CAP, NO_CAP } },
 	{ { 2244000, NO_CAP, NO_CAP, NO_CAP, NO_CAP, NO_CAP } },
