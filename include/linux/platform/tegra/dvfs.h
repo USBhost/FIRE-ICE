@@ -165,6 +165,10 @@ struct dvfs {
 	int max_millivolts;
 	int num_freqs;
 	struct dvfs_dfll_data dfll_data;
+
+	/* Set if clock rate is adapted by h/w to voltage noise (noise-aware) */
+	bool na_dvfs;
+	/* Indicates thermal DVFS on/off */
 	bool therm_dvfs;
 	/* Maximum rate safe at minimum voltage across all thermal ranges */
 	unsigned long fmax_at_vmin_safe_t;
