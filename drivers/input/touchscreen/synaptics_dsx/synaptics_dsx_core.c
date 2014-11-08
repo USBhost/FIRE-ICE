@@ -98,6 +98,9 @@
 
 #define SHIFT_BITS (10)
 
+static bool wakeup_gesture_changed = false;
+static bool wakeup_gesture_temp;
+
 static int synaptics_rmi4_f12_set_enables(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short ctrl28);
 
@@ -590,8 +593,14 @@ static ssize_t synaptics_rmi4_wake_gesture_store(struct device *dev,
 		return -EINVAL;
 	}
 
-	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture)
-		rmi4_data->enable_wakeup_gesture = input;
+	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture) {
+		if (rmi4_data->suspend) { 
+			wakeup_gesture_changed = true;
+			wakeup_gesture_temp = input;
+		} else {
+			rmi4_data->enable_wakeup_gesture = input;
+		}
+	}
 
 	return count;
 }
@@ -3280,6 +3289,11 @@ exit:
 	rmi4_data->suspend = false;
 	rmi4_data->face_down = 0;
 
+	if (wakeup_gesture_changed) {
+		rmi4_data->enable_wakeup_gesture = wakeup_gesture_temp;
+		wakeup_gesture_changed = false;
+	}
+			
 	return;
 }
 
