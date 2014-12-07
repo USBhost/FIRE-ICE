@@ -646,7 +646,7 @@ int battery_charger_batt_status_force_check(
 	mutex_unlock(&bc_dev->mutex);
 	return 0;
 }
-EXPORT_SYMBOL_GPL(battery_charger_batt_status_monitor_force_check);
+EXPORT_SYMBOL_GPL(battery_charger_batt_status_force_check);
 
 int battery_charger_get_batt_status_no_update_time_ms(
 	struct battery_charger_dev *bc_dev, s64 *time)
