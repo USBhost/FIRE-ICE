@@ -128,6 +128,9 @@ static void of_get_regulation_constraints(struct device_node *np,
 		constraints->disable_on_suspend = of_property_read_bool(np,
 					"regulator-disable-on-suspend");
 
+	if (of_find_property(np, "regulator-bypass-on", NULL))
+		constraints->bypass_on = true;
+
 	ramp_delay = of_get_property(np, "regulator-ramp-delay", NULL);
 	if (ramp_delay)
 		constraints->ramp_delay = be32_to_cpu(*ramp_delay);
