@@ -553,11 +553,22 @@ static int dvfs_rail_connect_to_regulator(struct dvfs_rail *rail)
 		rail->reg = reg;
 	}
 
-	v = regulator_enable(rail->reg);
-	if (v < 0) {
-		pr_err("tegra_dvfs: failed on enabling regulator %s\n, err %d",
-			rail->reg_id, v);
-		return v;
+	/*
+	 * Enable regulator for CPU and core rails. From s/w prospective these
+	 * are always on rails (turned on/off by side-band h/w); DVFS just
+	 * synchronizes initial usage count with h/w state.
+	 *
+	 * Skip regulator enable for GPU rail. This rail is under s/w control,
+	 * and it will be enabled by GPU power-ungating procedure via regulator
+	 * interface.
+	 */
+	if (!rail->in_band_pm) {
+		v = regulator_enable(rail->reg);
+		if (v < 0) {
+			pr_err("tegra_dvfs: failed on enabling regulator %s\n, err %d",
+				rail->reg_id, v);
+			return v;
+		}
 	}
 
 	v = regulator_get_voltage(rail->reg);
