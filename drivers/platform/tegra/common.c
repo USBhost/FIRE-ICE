@@ -189,6 +189,9 @@ static u8 display_config;
 
 static int tegra_split_mem_set;
 
+/* Bootloader configured dfll frequency */
+static unsigned long int dfll_boot_req_khz;
+
 struct device tegra_generic_cma_dev;
 struct device tegra_vpr_cma_dev;
 
@@ -2623,6 +2626,23 @@ void tegra_init_fuse(void)
 	}
 #endif
 }
+
+unsigned long int tegra_dfll_boot_req_khz(void)
+{
+	return dfll_boot_req_khz;
+}
+
+static int __init dfll_freq_cmd_line(char *line)
+{
+	int status = kstrtoul(line, 0, &dfll_boot_req_khz);
+	if (status) {
+		pr_err("\n%s:Error in parsing dfll_boot_req_khz:%d\n",
+			__func__, status);
+		dfll_boot_req_khz = 0;
+	}
+	return status;
+}
+early_param("dfll_boot_req_khz", dfll_freq_cmd_line);
 
 void __init display_tegra_dt_info(void)
 {
