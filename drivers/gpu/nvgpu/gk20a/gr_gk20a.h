@@ -24,6 +24,7 @@
 
 #define GR_IDLE_CHECK_DEFAULT		100 /* usec */
 #define GR_IDLE_CHECK_MAX		5000 /* usec */
+#define GR_FECS_POLL_INTERVAL		5 /* usec */
 
 #define INVALID_SCREEN_TILE_ROW_OFFSET	0xFFFFFFFF
 #define INVALID_MAX_WAYS		0xFFFFFFFF
@@ -414,4 +415,40 @@ void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					u32 **sm_dsm_perf_regs,
 					u32 *perf_register_stride);
 int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr);
+<<<<<<< HEAD
+=======
+int gr_gk20a_init_ctxsw_ucode(struct gk20a *g);
+int gr_gk20a_load_ctxsw_ucode(struct gk20a *g);
+void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g);
+void gr_gk20a_load_ctxsw_ucode_header(struct gk20a *g, u64 addr_base,
+	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset);
+void gr_gk20a_load_ctxsw_ucode_boot(struct gk20a *g, u64 addr_base,
+	struct gk20a_ctxsw_ucode_segments *segments, u32 reg_offset);
+
+
+void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *c);
+int gr_gk20a_disable_ctxsw(struct gk20a *g);
+int gr_gk20a_enable_ctxsw(struct gk20a *g);
+void gk20a_resume_all_sms(struct gk20a *g);
+void gk20a_suspend_all_sms(struct gk20a *g);
+int gk20a_gr_lock_down_sm(struct gk20a *g,
+				 u32 gpc, u32 tpc, u32 global_esr_mask);
+bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch);
+int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
+			   struct zbc_entry *color_val, u32 index);
+int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
+			   struct zbc_entry *depth_val, u32 index);
+int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
+		       u32 expect_delay);
+int gr_gk20a_init_ctx_state(struct gk20a *g);
+int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
+				   struct fecs_method_op_gk20a op,
+				   bool sleepduringwait);
+int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
+			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
+			  u32 class, u32 padding);
+void gr_gk20a_free_gr_ctx(struct gk20a *g,
+			  struct vm_gk20a *vm, struct gr_ctx_desc *gr_ctx);
+int gr_gk20a_halt_pipe(struct gk20a *g);
+>>>>>>> 48e570b... gpu: nvgpu: optimize fecs status polling
 #endif /*__GR_GK20A_H__*/
