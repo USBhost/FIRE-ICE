@@ -115,6 +115,10 @@ struct dvfs_rail {
 	struct tegra_cooling_device *vmin_cdev;
 	struct tegra_cooling_device *vmax_cdev;
 	struct tegra_cooling_device *vts_cdev;
+
+	/* Vmax capping method */
+	int (*apply_vmax_cap)(int *cap_idx, int new_idx, int cap_mv);
+
 	struct rail_alignment alignment;
 	struct rail_stats stats;
 	const char *version;
