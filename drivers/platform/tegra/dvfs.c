@@ -1851,8 +1851,7 @@ static int tegra_dvfs_rail_set_vmax_cdev_state(
 	struct dvfs_rail *rail = (struct dvfs_rail *)cdev->devdata;
 	int cur_cap = cur_state ? rail->therm_mv_caps[cur_state - 1] : 0;
 
-	return tegra_dvfs_therm_vmax_core_cap_apply(&rail->therm_cap_idx,
-						    cur_state, cur_cap);
+	return rail->apply_vmax_cap(&rail->therm_cap_idx, cur_state, cur_cap);
 }
 
 static struct thermal_cooling_device_ops tegra_dvfs_vmax_cooling_ops = {
@@ -1865,18 +1864,26 @@ void tegra_dvfs_rail_register_vmax_cdev(struct dvfs_rail *rail)
 {
 	struct thermal_cooling_device *dev;
 
-	if (!rail || !rail->vmax_cdev || (rail != tegra_core_rail))
+	if (!rail || !rail->vmax_cdev)
 		return;
 
 	dev = thermal_cooling_device_register(rail->vmax_cdev->cdev_type,
 		(void *)rail, &tegra_dvfs_vmax_cooling_ops);
 
+	if (!rail->apply_vmax_cap) {
+		WARN(1, "%s: %s: missing apply_vmax_cap\n",
+		     __func__, rail->reg_id);
+		return;
+	}
+
+	REGISTER_TEGRA_CDEV(vmax);
+
 	if (IS_ERR_OR_NULL(dev) || list_empty(&dev->thermal_instances)) {
 		/* report error & set the most agressive caps */
 		int cur_state = rail->vmax_cdev->trip_temperatures_num;
 		int cur_cap = rail->therm_mv_caps[cur_state - 1];
-		tegra_dvfs_therm_vmax_core_cap_apply(&rail->therm_cap_idx,
-						     cur_state, cur_cap);
+
+		rail->apply_vmax_cap(&rail->therm_cap_idx, cur_state, cur_cap);
 		pr_err("tegra cooling device %s failed to register\n",
 		       rail->vmax_cdev->cdev_type);
 	}
