@@ -2732,6 +2732,8 @@ static void sdhci_timeout_timer(unsigned long data)
 
 			tasklet_schedule(&host->finish_tasklet);
 		}
+		pr_info("%s(): %s timedout\n", __func__, mmc_hostname(host->mmc));
+		WARN_ON(1);
 	}
 
 	mmiowb();
@@ -2772,6 +2774,8 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 
 	if (intmask & SDHCI_INT_TIMEOUT) {
 		host->cmd->error = -ETIMEDOUT;
+		pr_info("%s(): %s timedout\n", __func__, mmc_hostname(host->mmc));
+		WARN_ON(1);
 	} else if (intmask & (SDHCI_INT_CRC | SDHCI_INT_END_BIT |
 			SDHCI_INT_INDEX)) {
 		host->cmd->error = -EILSEQ;
@@ -2879,6 +2883,8 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 
 	if (intmask & SDHCI_INT_DATA_TIMEOUT) {
 		host->data->error = -ETIMEDOUT;
+		pr_info("%s(): %s timedout\n", __func__, mmc_hostname(host->mmc));
+		WARN_ON(1);
 		pr_err("%s: Data Timeout error, intmask: %x\n",
 				mmc_hostname(host->mmc), intmask);
 		sdhci_dumpregs(host);

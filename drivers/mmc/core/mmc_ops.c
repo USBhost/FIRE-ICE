@@ -166,7 +166,10 @@ int mmc_send_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 
 	if (rocr && !mmc_host_is_spi(host))
 		*rocr = cmd.resp[0];
-
+	if (err == -ETIMEDOUT) {
+		pr_info("%s(): %s timedout\n", __func__, mmc_hostname(host));
+		WARN_ON(1);
+	}
 	return err;
 }
 
@@ -463,6 +466,8 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 					pr_err("%s Failed to send HPI command (err=%d)\n", __func__, err);
 				}
 			}
+			pr_info("%s(): %s timedout\n", __func__, mmc_hostname(card->host));
+			WARN_ON(1);
 			return -ETIMEDOUT;
 		}
 	} while (R1_CURRENT_STATE(status) == R1_STATE_PRG);

@@ -721,6 +721,10 @@ int mmc_interrupt_hpi(struct mmc_card *card)
 	} while (!err);
 
 out:
+	if (err == -ETIMEDOUT) {
+		pr_info("%s(): %s timedout\n", __func__, mmc_hostname(card->host));
+		WARN_ON(1);
+	}
 	mmc_release_host(card->host);
 	return err;
 }
