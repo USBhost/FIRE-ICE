@@ -276,6 +276,7 @@ int tegra_dvfs_replace_voltage_table(struct dvfs *d, const int *new_millivolts);
 
 int tegra_dvfs_dfll_mode_set(struct dvfs *d, unsigned long rate);
 int tegra_dvfs_dfll_mode_clear(struct dvfs *d, unsigned long rate);
+int tegra_dvfs_rail_set_reg_volatile(struct dvfs_rail *rail, bool set);
 
 struct tegra_cooling_device *tegra_dvfs_get_cpu_vmax_cdev(void);
 struct tegra_cooling_device *tegra_dvfs_get_cpu_vmin_cdev(void);
