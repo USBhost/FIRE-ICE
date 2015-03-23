@@ -890,10 +890,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_send_cid(host, cid);
 	else
 		err = mmc_all_send_cid(host, cid);
-	if (err == -ETIMEDOUT) {
-		pr_info("%s(): %s timedout on send_cid()\n", __func__, mmc_hostname(host));
-		WARN_ON(1);
-	}
 	if (err)
 		goto err;
 
@@ -924,10 +920,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	 */
 	if (!mmc_host_is_spi(host)) {
 		err = mmc_set_relative_addr(card);
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on set_relative_addr()\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err)
 			goto free_card;
 
@@ -939,10 +931,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		 * Fetch CSD from card.
 		 */
 		err = mmc_send_csd(card, card->raw_csd);
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on send_csd()\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err)
 			goto free_card;
 
@@ -959,10 +947,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	 */
 	if (!mmc_host_is_spi(host)) {
 		err = mmc_select_card(card);
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on select_card()\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err)
 			goto free_card;
 	}
@@ -973,10 +957,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		 */
 
 		err = mmc_get_ext_csd(card, &ext_csd);
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on get_ext_csd()\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err)
 			goto free_card;
 		err = mmc_read_ext_csd(card, ext_csd);
@@ -1005,10 +985,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 				 EXT_CSD_ERASE_GROUP_DEF, 1,
 				 card->ext_csd.generic_cmd6_time);
 
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on mmc_swtich() for enhanced area\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err && err != -EBADMSG)
 			goto free_card;
 
@@ -1040,10 +1016,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_PART_CONFIG,
 				 card->ext_csd.part_config,
 				 card->ext_csd.part_time);
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on mmc_swtich() default partition\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err && err != -EBADMSG)
 			goto free_card;
 	}
@@ -1058,10 +1030,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 				 EXT_CSD_POWER_OFF_NOTIFICATION,
 				 EXT_CSD_POWER_ON,
 				 card->ext_csd.generic_cmd6_time);
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on mmc_swtich() for poweroff notification\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err && err != -EBADMSG)
 			goto free_card;
 
@@ -1086,10 +1054,6 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 					 EXT_CSD_HS_TIMING, 1,
 					 card->ext_csd.generic_cmd6_time);
 
-		if (err == -ETIMEDOUT) {
-			pr_info("%s(): %s timedout on high speed setup\n", __func__, mmc_hostname(card->host));
-			WARN_ON(1);
-		}
 		if (err && err != -EBADMSG)
 			goto free_card;
 

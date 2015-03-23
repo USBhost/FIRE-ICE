@@ -2106,8 +2106,6 @@ static int sdhci_tegra_issue_tuning_cmd(struct sdhci_host *sdhci)
 			dev_err(mmc_dev(sdhci->mmc), "Controller never"
 				"released inhibit bit(s).\n");
 			err = -ETIMEDOUT;
-			pr_info("%s(): %s timedout\n", __func__, mmc_hostname(sdhci->mmc));
-			WARN_ON(1);
 			goto out;
 		}
 		timeout--;
