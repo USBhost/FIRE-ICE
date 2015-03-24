@@ -45,7 +45,6 @@
 #include <linux/clk/tegra.h>
 
 #include <linux/sched.h>
-#include <linux/input-cfboost.h>
 
 
 #include "gk20a.h"
@@ -920,13 +919,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 
 	gk20a_scale_resume(pdev);
 
-#ifdef CONFIG_INPUT_CFBOOST
-	if (!g->boost_added) {
-		gk20a_dbg_info("add touch boost");
-		cfb_add_device(dev);
-		g->boost_added = true;
-	}
-#endif
 done:
 	return err;
 }
@@ -1435,11 +1427,6 @@ static int __exit gk20a_remove(struct platform_device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	gk20a_dbg_fn("");
-
-#ifdef CONFIG_INPUT_CFBOOST
-	if (g->boost_added)
-		cfb_remove_device(&dev->dev);
-#endif
 
 	if (g->remove_support)
 		g->remove_support(dev);
