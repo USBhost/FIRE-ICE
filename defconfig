@@ -1,0 +1,2 @@
+rm $PWD/arch/arm64/configs/USBhost_defconfig
+cp ./.config $PWD/arch/arm64/configs/USBhost_defconfig
