@@ -79,6 +79,12 @@ static inline void bfq_group_init_entity(struct bfqio_cgroup *bgrp,
 		entity->new_weight = bfq_ioprio_to_weight(bgrp->ioprio);
 		entity->new_ioprio = bgrp->ioprio;
 	} else {
+		if (bgrp->weight < BFQ_MIN_WEIGHT ||
+		    bgrp->weight > BFQ_MAX_WEIGHT) {
+			printk(KERN_CRIT "bfq_group_init_entity: "
+					 "bgrp->weight %d\n", bgrp->weight);
+			BUG();
+		}
 		entity->new_weight = bgrp->weight;
 		entity->new_ioprio = bfq_weight_to_ioprio(bgrp->weight);
 	}
@@ -905,3 +911,4 @@ static struct bfq_group *bfq_alloc_root_group(struct bfq_data *bfqd, int node)
 	return bfqg;
 }
 #endif
+
