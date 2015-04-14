@@ -450,11 +450,11 @@ static struct tegra_dc_cmu dsi_j_qxga_8_9_cmu = {
 
 #define ORIG_PWM_MAX 255
 #define ORIG_PWM_DEF 133
-#define ORIG_PWM_MIN 10
+#define ORIG_PWM_MIN 0
 
 #define MAP_PWM_MAX     255
 #define MAP_PWM_DEF     90
-#define MAP_PWM_MIN     7
+#define MAP_PWM_MIN     3
 
 static unsigned char shrink_pwm(int val)
 {
