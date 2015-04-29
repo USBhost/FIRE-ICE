@@ -189,6 +189,16 @@ static const struct file_operations debug_shrinker_fops = {
         .release = single_release,
 };
 
+/* If zram is being used as swap, and zram is using zsmalloc allocator
+ * then there is a potential bug when reclaim happens from interrupt
+ * context
+ */
+static void adjust_scan_control(struct scan_control *sc)
+{
+	if (in_interrupt() && IS_ENABLED(ZSMALLOC) && total_swap_pages)
+		sc->may_swap = 0;
+}
+
 /*
  * Add a shrinker callback to be called from the vm
  */
@@ -2491,6 +2501,8 @@ unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 		.gfp_mask = sc.gfp_mask,
 	};
 
+	adjust_scan_control(&sc);
+
 	/*
 	 * Do not enter reclaim if fatal signal was delivered while throttled.
 	 * 1 is returned so that the page allocator does not OOM kill at this
@@ -2574,6 +2586,7 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
 		.gfp_mask = sc.gfp_mask,
 	};
 
+	adjust_scan_control(&sc);
 	/*
 	 * Unlike direct reclaim via alloc_pages(), memcg's reclaim doesn't
 	 * take care of from where we get pages. So the node where we start the
@@ -2764,6 +2777,7 @@ static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 	struct shrink_control shrink = {
 		.gfp_mask = sc.gfp_mask,
 	};
+	adjust_scan_control(&sc);
 loop_again:
 	sc.priority = DEF_PRIORITY;
 	sc.nr_reclaimed = 0;
@@ -3224,6 +3238,7 @@ unsigned long shrink_all_memory(unsigned long nr_to_reclaim)
 	struct task_struct *p = current;
 	unsigned long nr_reclaimed;
 
+	adjust_scan_control(&sc);
 	p->flags |= PF_MEMALLOC;
 	lockdep_set_current_reclaim_state(sc.gfp_mask);
 	reclaim_state.reclaimed_slab = 0;
