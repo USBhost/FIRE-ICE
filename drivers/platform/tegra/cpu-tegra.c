@@ -621,7 +621,8 @@ int tegra_update_cpu_speed(unsigned long rate)
 	freqs.old = tegra_getspeed(0);
 	freqs.new = rate;
 
-	rate = clk_round_rate(cpu_clk, rate * 1000);
+	rate = clk_round_rate(cpu_clk, rate * 1000UL);
+
 	if (!IS_ERR_VALUE(rate))
 		freqs.new = rate / 1000;
 
