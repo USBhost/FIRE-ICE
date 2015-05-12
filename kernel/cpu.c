@@ -328,8 +328,13 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen)
 	 *
 	 * Wait for the stop thread to go away.
 	 */
+#ifdef CONFIG_SCHED_BFS
+	while (!idle_cpu(cpu))
+		cpu_relax();
+#else
 	while (!idle_cpu_relaxed(cpu))
 		cpu_read_relax();
+#endif
 
 	/* This actually kills the CPU. */
 	__cpu_die(cpu);

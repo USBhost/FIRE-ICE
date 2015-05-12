@@ -14,11 +14,24 @@
  * MAX_RT_PRIO must not be smaller than MAX_USER_RT_PRIO.
  */
 
+#ifdef CONFIG_SCHED_BFS
+#define MAX_USER_RT_PRIO	100
+#define MAX_RT_PRIO		(MAX_USER_RT_PRIO + 1)
+#define DEFAULT_PRIO		(MAX_RT_PRIO + 20)
+
+#define PRIO_RANGE		(40)
+#define MAX_PRIO		(MAX_RT_PRIO + PRIO_RANGE)
+#define ISO_PRIO		(MAX_RT_PRIO)
+#define NORMAL_PRIO		(MAX_RT_PRIO + 1)
+#define IDLE_PRIO		(MAX_RT_PRIO + 2)
+#define PRIO_LIMIT		((IDLE_PRIO) + 1)
+#else /* CONFIG_SCHED_BFS */
 #define MAX_USER_RT_PRIO	100
 #define MAX_RT_PRIO		MAX_USER_RT_PRIO
 
 #define MAX_PRIO		(MAX_RT_PRIO + 40)
 #define DEFAULT_PRIO		(MAX_RT_PRIO + 20)
+#endif /* CONFIG_SCHED_BFS */
 
 static inline int rt_prio(int prio)
 {
@@ -36,6 +49,7 @@ static inline int rt_task(struct task_struct *p)
 extern int rt_mutex_getprio(struct task_struct *p);
 extern void rt_mutex_setprio(struct task_struct *p, int prio);
 extern void rt_mutex_adjust_pi(struct task_struct *p);
+extern int rt_mutex_check_prio(struct task_struct *task, int newprio);
 static inline bool tsk_is_pi_blocked(struct task_struct *tsk)
 {
 	return tsk->pi_blocked_on != NULL;
@@ -49,6 +63,10 @@ static inline int rt_mutex_getprio(struct task_struct *p)
 static inline bool tsk_is_pi_blocked(struct task_struct *tsk)
 {
 	return false;
+}
+static inline int rt_mutex_check_prio(struct task_struct *task, int newprio)
+{
+	return 0;
 }
 #endif
 

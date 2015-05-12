@@ -71,6 +71,66 @@ struct sched_param {
 
 #include <asm/processor.h>
 
+#define SCHED_ATTR_SIZE_VER0	48	/* sizeof first published struct */
+
+/*
+ * Extended scheduling parameters data structure.
+ *
+ * This is needed because the original struct sched_param can not be
+ * altered without introducing ABI issues with legacy applications
+ * (e.g., in sched_getparam()).
+ *
+ * However, the possibility of specifying more than just a priority for
+ * the tasks may be useful for a wide variety of application fields, e.g.,
+ * multimedia, streaming, automation and control, and many others.
+ *
+ * This variant (sched_attr) is meant at describing a so-called
+ * sporadic time-constrained task. In such model a task is specified by:
+ *  - the activation period or minimum instance inter-arrival time;
+ *  - the maximum (or average, depending on the actual scheduling
+ *    discipline) computation time of all instances, a.k.a. runtime;
+ *  - the deadline (relative to the actual activation time) of each
+ *    instance.
+ * Very briefly, a periodic (sporadic) task asks for the execution of
+ * some specific computation --which is typically called an instance--
+ * (at most) every period. Moreover, each instance typically lasts no more
+ * than the runtime and must be completed by time instant t equal to
+ * the instance activation time + the deadline.
+ *
+ * This is reflected by the actual fields of the sched_attr structure:
+ *
+ *  @size		size of the structure, for fwd/bwd compat.
+ *
+ *  @sched_policy	task's scheduling policy
+ *  @sched_flags	for customizing the scheduler behaviour
+ *  @sched_nice		task's nice value      (SCHED_NORMAL/BATCH)
+ *  @sched_priority	task's static priority (SCHED_FIFO/RR)
+ *  @sched_deadline	representative of the task's deadline
+ *  @sched_runtime	representative of the task's runtime
+ *  @sched_period	representative of the task's period
+ *
+ * Given this task model, there are a multiplicity of scheduling algorithms
+ * and policies, that can be used to ensure all the tasks will make their
+ * timing constraints.
+ */
+struct sched_attr {
+	u32 size;
+
+	u32 sched_policy;
+	u64 sched_flags;
+
+	/* SCHED_NORMAL, SCHED_BATCH */
+	s32 sched_nice;
+
+	/* SCHED_FIFO, SCHED_RR */
+	u32 sched_priority;
+
+	/* SCHED_DEADLINE */
+	u64 sched_runtime;
+	u64 sched_deadline;
+	u64 sched_period;
+};
+
 struct exec_domain;
 struct futex_pi_state;
 struct robust_list_head;
@@ -145,6 +205,10 @@ extern void proc_sched_set_task(struct task_struct *p);
 extern void
 print_cfs_rq(struct seq_file *m, int cpu, struct cfs_rq *cfs_rq);
 #endif
+
+#define VMACACHE_BITS 2
+#define VMACACHE_SIZE (1U << VMACACHE_BITS)
+#define VMACACHE_MASK (VMACACHE_SIZE - 1)
 
 /*
  * Task state bitmask. NOTE! These bits are also
@@ -245,8 +309,6 @@ extern void sched_init_smp(void);
 extern asmlinkage void schedule_tail(struct task_struct *prev);
 extern void init_idle(struct task_struct *idle, int cpu);
 extern void init_idle_bootup_task(struct task_struct *idle);
-
-extern int runqueue_is_locked(int cpu);
 
 #if defined(CONFIG_SMP) && defined(CONFIG_NO_HZ_COMMON)
 extern void nohz_balance_enter_idle(int cpu);
@@ -907,6 +969,8 @@ void free_sched_domains(cpumask_var_t doms[], unsigned int ndoms);
 
 bool cpus_share_cache(int this_cpu, int that_cpu);
 
+extern void wake_up_if_idle(int cpu);
+
 #else /* CONFIG_SMP */
 
 struct sched_domain_attr;
@@ -1061,8 +1125,10 @@ struct task_struct {
 	unsigned int ptrace;
 	unsigned int yield_count;
 
-#ifdef CONFIG_SMP
+#if defined(CONFIG_SMP) && !defined(CONFIG_SCHED_BFS)
 	struct llist_node wake_entry;
+#endif
+#if defined(CONFIG_SMP) || defined(CONFIG_SCHED_BFS)
 	int on_cpu;
 	struct task_struct *last_wakee;
 	unsigned long wakee_flips;
@@ -1072,9 +1138,25 @@ struct task_struct {
 
 	int prio, static_prio, normal_prio;
 	unsigned int rt_priority;
+#ifdef CONFIG_SCHED_BFS
+	int time_slice;
+	u64 deadline;
+	u64 priodl; /* 8bits prio and 56bits deadline for quick processing */
+	struct list_head run_list;
+	u64 last_ran;
+	u64 sched_time; /* sched_clock time spent running */
+#ifdef CONFIG_SMP
+	bool sticky; /* Soft affined flag */
+#endif
+#ifdef CONFIG_HOTPLUG_CPU
+	bool zerobound; /* Bound to CPU0 for hotplug */
+#endif
+	unsigned long rt_timeout;
+#else /* CONFIG_SCHED_BFS */
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
+#endif
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
 #endif
@@ -1126,6 +1208,9 @@ struct task_struct {
 #ifdef CONFIG_COMPAT_BRK
 	unsigned brk_randomized:1;
 #endif
+	/* per-thread vma caching */
+	u32 vmacache_seqnum;
+	struct vm_area_struct *vmacache[VMACACHE_SIZE];
 #if defined(SPLIT_RSS_COUNTING)
 	struct task_rss_stat	rss_stat;
 #endif
@@ -1188,6 +1273,9 @@ struct task_struct {
 	int __user *clear_child_tid;		/* CLONE_CHILD_CLEARTID */
 
 	cputime_t utime, stime, utimescaled, stimescaled;
+#ifdef CONFIG_SCHED_BFS
+	unsigned long utime_pc, stime_pc;
+#endif
 	cputime_t gtime;
 #ifndef CONFIG_VIRT_CPU_ACCOUNTING_NATIVE
 	struct cputime prev_cputime;
@@ -1450,6 +1538,58 @@ struct task_struct {
 	unsigned int	sequential_io_avg;
 #endif
 };
+
+#ifdef CONFIG_SCHED_BFS
+bool grunqueue_is_locked(void);
+void grq_unlock_wait(void);
+void cpu_scaling(int cpu);
+void cpu_nonscaling(int cpu);
+#define tsk_seruntime(t)		((t)->sched_time)
+#define tsk_rttimeout(t)		((t)->rt_timeout)
+
+static inline void tsk_cpus_current(struct task_struct *p)
+{
+}
+
+static inline int runqueue_is_locked(int cpu)
+{
+	return grunqueue_is_locked();
+}
+
+void print_scheduler_version(void);
+
+static inline bool iso_task(struct task_struct *p)
+{
+	return (p->policy == SCHED_ISO);
+}
+#else /* CFS */
+extern int runqueue_is_locked(int cpu);
+static inline void cpu_scaling(int cpu)
+{
+}
+
+static inline void cpu_nonscaling(int cpu)
+{
+}
+#define tsk_seruntime(t)	((t)->se.sum_exec_runtime)
+#define tsk_rttimeout(t)	((t)->rt.timeout)
+
+static inline void tsk_cpus_current(struct task_struct *p)
+{
+	p->nr_cpus_allowed = current->nr_cpus_allowed;
+}
+
+static inline void print_scheduler_version(void)
+{
+	printk(KERN_INFO"CFS CPU scheduler.\n");
+}
+
+static inline bool iso_task(struct task_struct *p)
+{
+	return false;
+}
+
+#endif /* CONFIG_SCHED_BFS */
 
 /* Future-safe accessor for struct task_struct's cpus_allowed. */
 #define tsk_cpus_allowed(tsk) (&(tsk)->cpus_allowed)
@@ -1905,7 +2045,7 @@ extern unsigned long long
 task_sched_runtime(struct task_struct *task);
 
 /* sched_exec is called by processes performing an exec */
-#ifdef CONFIG_SMP
+#if defined(CONFIG_SMP) && !defined(CONFIG_SCHED_BFS)
 extern void sched_exec(void);
 #else
 #define sched_exec()   {}
@@ -1949,7 +2089,7 @@ static inline void sched_autogroup_fork(struct signal_struct *sig) { }
 static inline void sched_autogroup_exit(struct signal_struct *sig) { }
 #endif
 
-extern bool yield_to(struct task_struct *p, bool preempt);
+extern int yield_to(struct task_struct *p, bool preempt);
 extern void set_user_nice(struct task_struct *p, long nice);
 extern int task_prio(const struct task_struct *p);
 extern int task_nice(const struct task_struct *p);
@@ -1961,6 +2101,8 @@ extern int sched_setscheduler(struct task_struct *, int,
 			      const struct sched_param *);
 extern int sched_setscheduler_nocheck(struct task_struct *, int,
 				      const struct sched_param *);
+extern int sched_setattr(struct task_struct *,
+			 const struct sched_attr *);
 extern struct task_struct *idle_task(int cpu);
 /**
  * is_idle_task - is the specified task an idle task?
@@ -2196,7 +2338,12 @@ extern void set_task_comm(struct task_struct *tsk, char *from);
 extern char *get_task_comm(char *to, struct task_struct *tsk);
 
 #ifdef CONFIG_SMP
+#ifdef CONFIG_SCHED_BFS
+/* scheduler_ipi does nothing on BFS */
+static inline void scheduler_ipi(void) { }
+#else
 void scheduler_ipi(void);
+#endif
 extern unsigned long wait_task_inactive(struct task_struct *, long match_state);
 #else
 static inline void scheduler_ipi(void) { }
@@ -2685,7 +2832,7 @@ static inline unsigned int task_cpu(const struct task_struct *p)
 	return 0;
 }
 
-static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
+static inline void set_task_cpu(struct task_struct *p, int cpu)
 {
 }
 
