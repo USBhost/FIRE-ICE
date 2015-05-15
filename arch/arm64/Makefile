@@ -38,6 +38,7 @@ O2_FLAGS := \
 	--param l1-cache-size=96 \
 	--param l2-cache-size=2048 \
 	-fweb \
+	-O3 \
 	-w \
 
 Oall_FLAGS := $(O1_FLAGS) $(O2_FLAGS)
