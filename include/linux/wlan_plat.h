@@ -28,7 +28,6 @@ struct wifi_platform_data {
 	int (*get_mac_addr)(unsigned char *buf);
 	int (*get_wake_irq)(void);
 	void *(*get_country_code)(char *ccode, u32 flags);
-	int (*get_wake_irq)(void);
 	struct sysedp_consumer *sysedpc;
 };
 
