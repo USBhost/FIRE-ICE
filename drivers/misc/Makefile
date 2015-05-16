@@ -63,7 +63,6 @@ obj-$(CONFIG_TEGRA_CRYPTO_DEV)	+= tegra-cryptodev.o
 obj-$(CONFIG_TEGRA_BB_SUPPORT)	+= tegra-baseband/
 obj-$(CONFIG_TEGRA_CEC_SUPPORT)	+= tegra-cec/
 obj-$(CONFIG_MAX1749_VIBRATOR)	+= max1749.o
-obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_THERM_EST)		+= therm_est.o
 CFLAGS_tegra-throughput.o	 = -Werror
 ifeq ($(CONFIG_ARM64),y)
@@ -88,3 +87,4 @@ obj-$(CONFIG_ARCH_TEGRA)        +=tegra_timerinfo.o
 obj-$(CONFIG_MODS) 		+= mods/
 obj-$(CONFIG_DENVER_CPU)	+= idle_test_t132.o
 obj-$(CONFIG_QCT_9K_MODEM)	+= qcom-mdm-9k/
+obj-$(CONFIG_UID_CPUTIME) += uid_cputime.o
