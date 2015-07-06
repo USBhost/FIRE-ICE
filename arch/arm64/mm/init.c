@@ -172,11 +172,10 @@ void __init arm64_memblock_init(void)
 		memblock_reserve(base, size);
 	}
 
+	early_init_fdt_scan_reserved_mem();
 	/* reserve any platform specific memblock areas */
 	if (machine_desc->reserve)
 		machine_desc->reserve();
-
-	early_init_fdt_scan_reserved_mem();
 
 	/* reserve memory for DMA contigouos allocations */
 	dma_contiguous_reserve(arm_dma_limit);
