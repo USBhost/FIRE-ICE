@@ -84,10 +84,6 @@
 #define O_PATH		010000000
 #endif
 
-#ifndef O_TMPFILE
-#define O_TMPFILE	020000000
-#endif
-
 #ifndef O_NDELAY
 #define O_NDELAY	O_NONBLOCK
 #endif
