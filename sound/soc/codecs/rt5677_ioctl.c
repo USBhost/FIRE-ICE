@@ -10,6 +10,7 @@
  */
 
 #include <linux/spi/spi.h>
+#include <linux/vmalloc.h>
 #include <sound/soc.h>
 #include "rt_codec_ioctl.h"
 #include "rt5677_ioctl.h"
@@ -151,9 +152,9 @@ int rt5677_ioctl_common(struct snd_hwdep *hw, struct file *file,
 	case RT_WRITE_CODEC_DSP_IOCTL:
 	case RT_WRITE_CODEC_DSP_IOCTL_COMPAT:
 		if (!rt5677->model_buf || rt5677->model_len < size) {
-			kfree(rt5677->model_buf);
+			vfree(rt5677->model_buf);
 			rt5677->model_len = 0;
-			rt5677->model_buf = kzalloc(size, GFP_KERNEL);
+			rt5677->model_buf = vmalloc(size);
 			if (!rt5677->model_buf)
 				return -ENOMEM;
 		}
