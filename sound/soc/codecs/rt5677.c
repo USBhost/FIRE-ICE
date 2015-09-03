@@ -22,6 +22,7 @@
 #include <linux/of_gpio.h>
 #include <linux/elf.h>
 #include <linux/firmware.h>
+#include <linux/vmalloc.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -5025,7 +5026,7 @@ static int rt5677_i2c_probe(struct i2c_client *i2c,
 	rt5677->mbist_test = false;
 	rt5677->vad_sleep = true;
 	rt5677->mic_buf_len = RT5677_PRIV_MIC_BUF_SIZE;
-	rt5677->mic_buf = kmalloc(rt5677->mic_buf_len, GFP_KERNEL);
+	rt5677->mic_buf = vmalloc(rt5677->mic_buf_len);
 	if (NULL == rt5677->mic_buf) {
 		kfree(rt5677);
 		return -ENOMEM;
@@ -5082,8 +5083,8 @@ static int rt5677_i2c_remove(struct i2c_client *i2c)
 	struct rt5677_priv *rt5677 = i2c_get_clientdata(i2c);
 
 	snd_soc_unregister_codec(&i2c->dev);
-	kfree(rt5677->mic_buf);
-	kfree(rt5677->model_buf);
+	vfree(rt5677->mic_buf);
+	vfree(rt5677->model_buf);
 	kfree(rt5677);
 	return 0;
 }
