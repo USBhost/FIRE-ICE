@@ -402,6 +402,11 @@ el0_sync_compat:
 	adr	x26, el0_fpsimd_exc
 	cmp	x24, #ESR_EL1_EC_FP_EXC32	// FP/ASIMD exception
 	b.eq	el0_sync_tramp
+#ifdef CONFIG_DENVER_CPU
+	adr 	x26, el0_sp_pc
+	cmp	x24, #ESR_EL1_EC_PC_ALIGN	// pc alignment exception
+	b.eq	el0_sync_tramp
+#endif
 	adr	x26, el0_undef
 	cmp	x24, #ESR_EL1_EC_UNKNOWN	// unknown exception in EL0
 	b.eq	el0_sync_tramp
