@@ -380,7 +380,8 @@ el0_sync:
 	adr	x26, el0_dbg
 	cmp	x24, #ESR_EL1_EC_BREAKPT_EL0	// debug exception in EL0
 	b.ge	el0_sync_tramp
-	b	el0_inv
+	adr	x26, el0_inv
+	b	el0_sync_tramp
 
 #ifdef CONFIG_COMPAT
 	.align	6
@@ -428,7 +429,7 @@ el0_sync_compat:
 	adr	x26, el0_dbg
 	cmp	x24, #ESR_EL1_EC_BREAKPT_EL0	// debug exception in EL0
 	b.ge	el0_sync_tramp
-	b	el0_inv
+	adr	x26, el0_inv
 el0_sync_tramp:
 	blr	x26
 	/* Fall through	*/
