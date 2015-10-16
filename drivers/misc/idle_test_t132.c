@@ -130,7 +130,7 @@ static int idle_write(void *data, u64 val)
 
 	sleep = ktime_sub(ktime_get(), time);
 	time = ktime_sub(sleep, interval);
-	trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
+	//trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
 
 	/* Re-enable bgallow */
 	denver_set_bg_allowed(1, true);
