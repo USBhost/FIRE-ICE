@@ -34,7 +34,9 @@ void nvhost_device_list_remove(struct platform_device *pdev);
 
 #ifdef CONFIG_DEBUG_FS
     /* debug info, default is compiled-in but effectively disabled (0 mask) */
-    #define NVHOST_DEBUG
+    // Disable NVHOST_DEBUG - trace_printks in the kernel will initialize the
+    // ftrace buffer.
+    // #define NVHOST_DEBUG
     /*e.g: echo 1 > /d/tegra_host/dbg_mask */
     #define NVHOST_DEFAULT_DBG_MASK 0
 #else

@@ -177,7 +177,6 @@ config QCT_9K_MODEM
        depends on MACH_T132_FLOUNDER
        default n
        select QCOM_USB_MODEM_POWER
-       select MDM_FTRACE_DEBUG
        select MDM_ERRMSG
        select MDM_POWEROFF_MODEM_IN_OFFMODE_CHARGING
        select MSM_SUBSYSTEM_RESTART

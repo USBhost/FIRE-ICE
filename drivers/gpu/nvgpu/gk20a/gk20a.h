@@ -356,7 +356,9 @@ struct gk20a_cyclestate_buffer_elem {
 
 #ifdef CONFIG_DEBUG_FS
     /* debug info, default is compiled-in but effectively disabled (0 mask) */
-    #define GK20A_DEBUG
+    // Disable GK20A_DEBUG - trace_printks in the kernel will initialize the
+    // ftrace buffer.
+    // #define GK20A_DEBUG
     /*e.g: echo 1 > /d/tegra_host/dbg_mask */
     #define GK20A_DEFAULT_DBG_MASK 0
 #else
