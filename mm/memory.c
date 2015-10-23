@@ -1867,6 +1867,8 @@ follow_page_again:
 				int ret;
 				unsigned int fault_flags = 0;
 
+				mutex_unlock(&s_follow_page_lock);
+
 				fault_flags = FAULT_FLAG_NO_CMA;
 
 				/* For mlock, just skip the stack guard page. */
@@ -1885,7 +1887,6 @@ follow_page_again:
 							fault_flags);
 
 				if (ret & VM_FAULT_ERROR) {
-					mutex_unlock(&s_follow_page_lock);
 					if (ret & VM_FAULT_OOM)
 						return i ? i : -ENOMEM;
 					if (ret & (VM_FAULT_HWPOISON |
@@ -1910,7 +1911,6 @@ follow_page_again:
 				}
 
 				if (ret & VM_FAULT_RETRY) {
-					mutex_unlock(&s_follow_page_lock);
 					if (nonblocking)
 						*nonblocking = 0;
 					return i;
@@ -1933,6 +1933,7 @@ follow_page_again:
 					foll_flags &= ~FOLL_WRITE;
 
 				cond_resched();
+				mutex_lock(&s_follow_page_lock);
 			}
 			if (IS_ERR(page)) {
 				mutex_unlock(&s_follow_page_lock);
@@ -1960,6 +1961,8 @@ follow_page_again:
 				 */
 				if (page == old_page)
 					wait_on_page_locked_timeout(page);
+
+				mutex_unlock(&s_follow_page_lock);
 				if (foll_flags & FOLL_WRITE) {
 					/* page would be marked as old during
 					 * migration. To make it young, call
@@ -1974,7 +1977,6 @@ follow_page_again:
 						start, fault_flags);
 				}
 				foll_flags = gup_flags;
-				mutex_unlock(&s_follow_page_lock);
 				goto follow_page_again;
 			}
 
