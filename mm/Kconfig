@@ -265,7 +265,7 @@ config ZONE_DMA_FLAG
 config BOUNCE
 	bool "Enable bounce buffers"
 	default y
-	depends on BLOCK && MMU && (ZONE_DMA || HIGHMEM)
+	depends on BLOCK && MMU && (ZONE_DMA32 || HIGHMEM)
 	help
 	  Enable bounce buffers for devices that cannot access
 	  the full range of memory available to the CPU. Enabled
