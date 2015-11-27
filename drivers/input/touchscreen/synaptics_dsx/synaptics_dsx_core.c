@@ -821,6 +821,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 {
 	int retval;
 	unsigned char touch_count = 0; /* number of touch points */
+	unsigned char index;
 	unsigned char finger;
 	unsigned char fingers_to_process;
 	unsigned char finger_status;
@@ -876,16 +877,16 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			return 0;
 
 		/* Start checking from the highest bit */
-		temp = extra_data->data15_size - 1; /* Highest byte */
+		index = extra_data->data15_size - 1; /* Highest byte */
 		finger = (fingers_to_process - 1) % 8; /* Highest bit */
 		do {
-			if (extra_data->data15_data[temp] & (1 << finger))
+			if (extra_data->data15_data[index] & (1 << finger))
 				break;
 
 			if (finger) {
 				finger--;
-			} else {
-				temp--; /* Move to the next lower byte */
+			} else if (index > 0) {
+				index--; /* Move to the next lower byte */
 				finger = 7;
 			}
 
