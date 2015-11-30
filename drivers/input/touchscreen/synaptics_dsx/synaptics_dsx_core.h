@@ -25,6 +25,7 @@
 #define SYNAPTICS_DSX_DRIVER_VERSION 0x2002
 
 #include <linux/version.h>
+#include <linux/wakelock.h>
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38))
 #define KERNEL_ABOVE_2_6_38
@@ -295,6 +296,7 @@ struct synaptics_rmi4_data {
 	bool flash_prog_mode;
 	bool irq_enabled;
 	bool fingers_on_2d;
+	bool gesture_sleep;
 	bool suspend;
 	bool sensor_sleep;
 	bool stay_awake;
@@ -302,6 +304,7 @@ struct synaptics_rmi4_data {
 	bool f11_wakeup_gesture;
 	bool f12_wakeup_gesture;
 	bool enable_wakeup_gesture;
+	struct wake_lock rmi4_wake_lock;
 	int (*reset_device)(struct synaptics_rmi4_data *rmi4_data);
 	int tw_vendor_pin;
 	int face_down;
