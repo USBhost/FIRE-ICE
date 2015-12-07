@@ -1300,11 +1300,18 @@ static bool pmu_queue_is_empty(struct pmu_gk20a *pmu,
 {
 	u32 head, tail;
 
-	pmu_queue_head(pmu, queue, &head, QUEUE_GET);
+	if (pmu_queue_head(pmu, queue, &head, QUEUE_GET)) {
+		gk20a_err(dev_from_gk20a(pmu->g),
+			"pmu_queue_is_empty: head queue index out of range");
+		return false;
+	}
 	if (queue->opened && queue->oflag == OFLAG_READ)
 		tail = queue->position;
-	else
-		pmu_queue_tail(pmu, queue, &tail, QUEUE_GET);
+	else if (pmu_queue_tail(pmu, queue, &tail, QUEUE_GET)) {
+		gk20a_err(dev_from_gk20a(pmu->g),
+			"pmu_queue_is_empty: tail queue index out of range");
+		return false;
+	}
 
 	return head == tail;
 }
@@ -1317,8 +1324,12 @@ static bool pmu_queue_has_room(struct pmu_gk20a *pmu,
 
 	size = ALIGN(size, QUEUE_ALIGNMENT);
 
-	pmu_queue_head(pmu, queue, &head, QUEUE_GET);
-	pmu_queue_tail(pmu, queue, &tail, QUEUE_GET);
+	if (pmu_queue_head(pmu, queue, &head, QUEUE_GET) ||
+	    pmu_queue_tail(pmu, queue, &tail, QUEUE_GET)) {
+		gk20a_err(dev_from_gk20a(pmu->g),
+			"pmu_queue_has_room: queue index out of range");
+		return false;
+	}
 
 	if (head >= tail) {
 		free = queue->offset + queue->size - head;
@@ -1369,7 +1380,11 @@ static int pmu_queue_pop(struct pmu_gk20a *pmu,
 		return -EINVAL;
 	}
 
-	pmu_queue_head(pmu, queue, &head, QUEUE_GET);
+	if (pmu_queue_head(pmu, queue, &head, QUEUE_GET)) {
+		gk20a_err(dev_from_gk20a(pmu->g),
+			"pmu_queue_pop: head queue index out of range");
+		return -EINVAL;
+	}
 	tail = queue->position;
 
 	if (head == tail)
