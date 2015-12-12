@@ -71,6 +71,15 @@ static unsigned long lowmem_deathpending_timeout;
 			pr_info(x);			\
 	} while (0)
 
+static bool protected(char *comm)
+{
+ 	if (strcmp(comm, "ndroid.systemui") == 0 || strcmp(comm, "system:ui") == 0) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 static int test_task_flag(struct task_struct *p, int flag)
 {
 	struct task_struct *t = p;
@@ -160,6 +169,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
+			task_unlock(p);
+			continue;
+		}
+		if (protected(p->comm)) {
 			task_unlock(p);
 			continue;
 		}
