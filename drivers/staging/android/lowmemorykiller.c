@@ -104,6 +104,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
 	struct task_struct *selected = NULL;
+	struct sysinfo swap_info;
 	int rem = 0;
 	int tasksize;
 	int i;
@@ -112,7 +113,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
-	struct sysinfo swap_info;
 	int other_free;
 	int other_file;
 	unsigned long nr_to_scan = sc->nr_to_scan;
@@ -130,8 +130,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (mutex_lock_interruptible(&scan_mutex) < 0)
 			return 0;
 	}
+
+	si_swapinfo(&swap_info);
+
 	other_free = global_page_state(NR_FREE_PAGES)
 			 - global_page_state(NR_FREE_CMA_PAGES)
+			 + swap_info.freeswap
 #ifdef CONFIG_TEGRA_NVMAP
 			 + nvmap_page_pool_get_unused_pages()
 #endif
@@ -139,9 +143,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	other_file = global_page_state(NR_FILE_PAGES)
 						- global_page_state(NR_SHMEM)
 						- total_swapcache_pages();
-
-	si_swapinfo(&swap_info);
-	other_free += swap_info.freeswap;
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
