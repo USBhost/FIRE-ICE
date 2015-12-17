@@ -27,21 +27,12 @@ ret_val	.req	x0	/* Aliased with dstin */
 
 /* Local version of dstin */
 dst	.req	x3
-last_src .req	x5
 
 
-#define LOAD_USER( offset, x...)		\
-9999:	x;					\
-	.section __ex_table,"a";		\
-	.align	3;				\
-	.quad	9999b, load_fixup ## offset;	\
-	.previous
-
+#define LOAD_USER( offset, x...) x
 #define STORE_USER(offset, x...) x
 
-ENTRY(__copy_from_user)
+ENTRY(memcpy)
 	mov	dst, dstin
-	add	last_src, src, count
-	mov	ret_val, #0
 #include "memcpy_base.h"
-ENDPROC(__copy_from_user)
+ENDPROC(memcpy)
