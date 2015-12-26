@@ -220,6 +220,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			task_unlock(p);
 			continue;
 		}
+		/* this bypasses all low memory calculations. */
+		if (swap_info.freeswap > total_swap_pages/10) {
+			task_unlock(p);
+			continue;
+		}
 		tasksize = get_mm_rss(p->mm);
 		task_unlock(p);
 		if (tasksize <= 0)
