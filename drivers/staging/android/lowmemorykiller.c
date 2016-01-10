@@ -55,15 +55,19 @@ static short lowmem_adj[6] = {
 	1,
 	6,
 	12,
+	13,
+	15,
 };
-static int lowmem_adj_size = 4;
+static int lowmem_adj_size = 6;
 static int lowmem_minfree[6] = {
-	3 * 512,	/* 6MB */
-	2 * 1024,	/* 8MB */
-	4 * 1024,	/* 16MB */
-	16 * 1024,	/* 64MB */
+	 3 *  512,	/* Foreground App: 	6 MB	*/
+	 2 * 1024,	/* Visible App: 	8 MB	*/
+	 4 * 1024,	/* Secondary Server: 	16 MB	*/
+	16 * 1024,	/* Hidden App: 		64 MB	*/
+	28 * 1024,	/* Content Provider: 	112 MB	*/
+	32 * 1024,	/* Empty App: 		128 MB	*/
 };
-static int lowmem_minfree_size = 4;
+static int lowmem_minfree_size = 6;
 
 static bool swap_wait = false;
 
