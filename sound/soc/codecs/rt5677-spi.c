@@ -46,7 +46,7 @@ static DEFINE_MUTEX(spi_mutex);
 /* Read DSP memory using SPI. Addr and len have to be multiples of 16-bits. */
 int rt5677_spi_read(u32 addr, u8 *rx_data, size_t len)
 {
-	unsigned int i, end, offset = 0;
+	unsigned int i, j, end, offset = 0;
 	int status = 0;
 	struct spi_transfer t[2];
 	struct spi_message m;
@@ -105,8 +105,10 @@ int rt5677_spi_read(u32 addr, u8 *rx_data, size_t len)
 		status |= spi_sync(g_spi, &m);
 		mutex_unlock(&spi_mutex);
 
+		/* If in burst mode, read as much as possible in 8 byte chunks.
+		   Only do bound checking for the last packet. */
 		if (spi_cmd == RT5677_SPI_READ_BURST) {
-			for (i = 0; i < end; i += 8) {
+			for (i = 0; i + 8 < end; i += 8) {
 				rx_data[offset + i + 0] = rx_buf[i + 7];
 				rx_data[offset + i + 1] = rx_buf[i + 6];
 				rx_data[offset + i + 2] = rx_buf[i + 5];
@@ -117,8 +119,11 @@ int rt5677_spi_read(u32 addr, u8 *rx_data, size_t len)
 				rx_data[offset + i + 7] = rx_buf[i + 0];
 			}
 		} else {
-			for (i = 0; i < end; i++)
-				rx_data[offset + i] = rx_buf[end - i - 1];
+			i = 0;
+		}
+		j = end - 1;
+		for (; i < end && offset + i < len; i++, j--) {
+			rx_data[offset + i] = rx_buf[j];
 		}
 
 		offset += end;
@@ -129,7 +134,7 @@ int rt5677_spi_read(u32 addr, u8 *rx_data, size_t len)
 
 int rt5677_spi_write(u32 addr, const u8 *txbuf, size_t len)
 {
-	unsigned int i, end, offset = 0;
+	unsigned int i, j, end, offset = 0;
 	int status = 0;
 	u8 write_buf[SPI_BURST_LEN + SPI_HEADER + 1];
 	u8 spi_cmd;
@@ -165,8 +170,10 @@ int rt5677_spi_write(u32 addr, const u8 *txbuf, size_t len)
 		write_buf[3] = ((addr + offset) & 0x0000ff00) >> 8;
 		write_buf[4] = ((addr + offset) & 0x000000ff) >> 0;
 
+		/* If in burst mode, write as much as possible in 8 byte chunks.
+		   Only do bound checking for the last packet. */
 		if (spi_cmd == RT5677_SPI_WRITE_BURST) {
-			for (i = 0; i < end; i += 8) {
+			for (i = 0; i + 8 < end; i += 8) {
 				write_buf[i + 12] = txbuf[offset + i + 0];
 				write_buf[i + 11] = txbuf[offset + i + 1];
 				write_buf[i + 10] = txbuf[offset + i + 2];
@@ -177,13 +184,14 @@ int rt5677_spi_write(u32 addr, const u8 *txbuf, size_t len)
 				write_buf[i +  5] = txbuf[offset + i + 7];
 			}
 		} else {
-			unsigned int j = end + (SPI_HEADER - 1);
-			for (i = 0; i < end; i++, j--) {
-				if (offset + i < len)
-					write_buf[j] = txbuf[offset + i];
-				else
-					write_buf[j] = 0;
-			}
+			i = 0;
+		}
+		j = end + (SPI_HEADER - 1);
+		for (; i < end; i++, j--) {
+			if (offset + i < len)
+				write_buf[j] = txbuf[offset + i];
+			else
+				write_buf[j] = 0;
 		}
 		write_buf[end + SPI_HEADER] = spi_cmd;
 
