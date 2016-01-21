@@ -135,14 +135,15 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 	other_free = global_page_state(NR_FREE_PAGES)
 			 - global_page_state(NR_FREE_CMA_PAGES)
+			 - totalreserve_pages
 			 + swap_info.freeswap
 #ifdef CONFIG_TEGRA_NVMAP
 			 + nvmap_page_pool_get_unused_pages()
 #endif
 			 ;
 	other_file = global_page_state(NR_FILE_PAGES)
-						- global_page_state(NR_SHMEM)
-						- total_swapcache_pages();
+			 - global_page_state(NR_SHMEM)
+			 - total_swapcache_pages();
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
