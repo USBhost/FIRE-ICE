@@ -21,8 +21,6 @@
  *      modify it under the terms of the GNU General Public License
  *      as published by the Free Software Foundation; either version
  *      2 of the License, or (at your option) any later version.
- *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <linux/bottom_half.h>
@@ -1764,9 +1762,6 @@ static void get_tcp6_sock(struct seq_file *seq, struct sock *sp, int i)
 	const struct tcp_sock *tp = tcp_sk(sp);
 	const struct inet_connection_sock *icsk = inet_csk(sp);
 	const struct ipv6_pinfo *np = inet6_sk(sp);
-	unsigned long cmdline = __get_free_page(GFP_TEMPORARY);
-	if (cmdline == NULL)
-		return;
 
 	dest  = &np->daddr;
 	src   = &np->rcv_saddr;
@@ -1789,7 +1784,7 @@ static void get_tcp6_sock(struct seq_file *seq, struct sock *sp, int i)
 
 	seq_printf(seq,
 		   "%4d: %08X%08X%08X%08X:%04X %08X%08X%08X%08X:%04X "
-		   "%02X %08X:%08X %02X:%08lX %08X %5d %8d %lu %d %pK %lu %lu %u %u %d %s\n",
+		   "%02X %08X:%08X %02X:%08lX %08X %5d %8d %lu %d %pK %lu %lu %u %u %d\n",
 		   i,
 		   src->s6_addr32[0], src->s6_addr32[1],
 		   src->s6_addr32[2], src->s6_addr32[3], srcp,
@@ -1809,10 +1804,8 @@ static void get_tcp6_sock(struct seq_file *seq, struct sock *sp, int i)
 		   jiffies_to_clock_t(icsk->icsk_ack.ato),
 		   (icsk->icsk_ack.quick << 1 ) | icsk->icsk_ack.pingpong,
 		   tp->snd_cwnd,
-		   tcp_in_initial_slowstart(tp) ? -1 : tp->snd_ssthresh,
-		   sk_get_waiting_task_cmdline(sp, cmdline)
+		   tcp_in_initial_slowstart(tp) ? -1 : tp->snd_ssthresh
 		   );
-	free_page(cmdline);
 }
 
 static void get_timewait6_sock(struct seq_file *seq,
@@ -1851,7 +1844,7 @@ static int tcp6_seq_show(struct seq_file *seq, void *v)
 			 "local_address                         "
 			 "remote_address                        "
 			 "st tx_queue rx_queue tr tm->when retrnsmt"
-			 "   uid  timeout inode cmdline\n");
+			 "   uid  timeout inode\n");
 		goto out;
 	}
 	st = seq->private;
