@@ -65,6 +65,11 @@ static int lowmem_minfree[6] = {
 };
 static int lowmem_minfree_size = 4;
 
+bool swap_wait = false;
+module_param(swap_wait, bool, 0644);
+int swap_wait_percent = 10; // 1=0% 2=50% 3=66% 4=75% 5=80% 10=90% full until lmk starts killing
+module_param(swap_wait_percent, int, 0644);
+
 static unsigned long lowmem_deathpending_timeout;
 
 #define lowmem_print(level, x...)			\
@@ -221,8 +226,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			task_unlock(p);
 			continue;
 		}
-		/* this bypasses all low memory calculations. */
-		if (swap_info.freeswap > total_swap_pages/10) {
+		if ((swap_wait == true) && (swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
 			task_unlock(p);
 			continue;
 		}
