@@ -13,4 +13,5 @@
 
 u64 get_input_time(void);
 
+bool input_event_boost(u64 input_event_duration);
 #endif
