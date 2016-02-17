@@ -795,12 +795,14 @@ static void tegra_adf_dev_state_free(struct adf_device *dev, void *driver_state)
 }
 
 static int tegra_adf_sanitize_proposed_bw(struct tegra_adf_info *adf_info,
-		const struct tegra_adf_proposed_bw *bw)
+		const struct tegra_adf_proposed_bw *bw, u8 win_num)
 {
 	struct device *dev = &adf_info->base.base.dev;
 	struct tegra_dc *dc = adf_info->dc;
-	u8 win_num = bw->win_num;
 	u8 i;
+
+	if (win_num != bw->win_num)
+		return -EINVAL;
 
 	if (win_num > DC_N_WINDOWS) {
 		dev_err(dev, "too many windows (%u > %u)\n", win_num,
@@ -886,7 +888,7 @@ static int tegra_adf_set_proposed_bw(struct tegra_adf_info *adf_info,
 		goto done;
 	}
 
-	ret = tegra_adf_sanitize_proposed_bw(adf_info, bw);
+	ret = tegra_adf_sanitize_proposed_bw(adf_info, bw, win_num);
 	if (ret < 0)
 		goto done;
 
