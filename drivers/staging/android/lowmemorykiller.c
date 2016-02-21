@@ -65,10 +65,10 @@ static int lowmem_minfree[6] = {
 };
 static int lowmem_minfree_size = 4;
 
-bool swap_wait = false;
+static bool swap_wait = false;
+static unsigned short swap_wait_percent = 10; /* 1=0% 2=50% 3=66% 4=75% 5=80% 10=90% 0=100% */
 module_param(swap_wait, bool, 0644);
-int swap_wait_percent = 10; // 1=0% 2=50% 3=66% 4=75% 5=80% 10=90% full until lmk starts killing
-module_param(swap_wait_percent, int, 0644);
+module_param(swap_wait_percent, short, 0644);
 
 static unsigned long lowmem_deathpending_timeout;
 
@@ -139,16 +139,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	si_swapinfo(&swap_info);
 
 	other_free = global_page_state(NR_FREE_PAGES)
-			 - global_page_state(NR_FREE_CMA_PAGES)
-			 - totalreserve_pages
-			 + swap_info.freeswap
+			- global_page_state(NR_FREE_CMA_PAGES)
+			- totalreserve_pages
+			+ swap_info.freeswap /* this basically stops lmk from killing until swap is about 50% full */
 #ifdef CONFIG_TEGRA_NVMAP
-			 + nvmap_page_pool_get_unused_pages()
+			+ nvmap_page_pool_get_unused_pages()
 #endif
 			 ;
 	other_file = global_page_state(NR_FILE_PAGES)
-			 - global_page_state(NR_SHMEM)
-			 - total_swapcache_pages();
+			- global_page_state(NR_SHMEM)
+			- total_swapcache_pages();
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
@@ -226,6 +226,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			task_unlock(p);
 			continue;
 		}
+		/* if enabled this bypasses all low memory calculations, so use with care! */
 		if ((swap_wait == true) && (swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
 			task_unlock(p);
 			continue;
