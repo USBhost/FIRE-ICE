@@ -66,7 +66,10 @@ static int lowmem_minfree[6] = {
 static int lowmem_minfree_size = 4;
 
 static bool swap_wait = false;
-static unsigned short swap_wait_percent = 10; /* 1=0% 2=50% 3=66% 4=75% 5=80% 10=90% 0=100% */
+
+/* 1=0% 2=50% 3=66% 4=75% 5=80% 10=90% 0=100% until killing is allowed */
+static unsigned short swap_wait_percent = 1;
+
 module_param(swap_wait, bool, 0644);
 module_param(swap_wait_percent, short, 0644);
 
@@ -78,6 +81,7 @@ static unsigned long lowmem_deathpending_timeout;
 			pr_info(x);			\
 	} while (0)
 
+/* TODO: allow user to add processes */
 static bool protected(char *comm)
 {
  	if (strcmp(comm, "ndroid.systemui") == 0 || strcmp(comm, "system:ui") == 0) {
@@ -121,6 +125,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_free;
 	int other_file;
 	unsigned long nr_to_scan = sc->nr_to_scan;
+	si_swapinfo(&swap_info);
 
 	rcu_read_lock();
 	tsk = current->group_leader;
@@ -136,12 +141,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			return 0;
 	}
 
-	si_swapinfo(&swap_info);
-
 	other_free = global_page_state(NR_FREE_PAGES)
 			- global_page_state(NR_FREE_CMA_PAGES)
 			- totalreserve_pages
-			+ swap_info.freeswap /* this basically stops lmk from killing until swap is about 50% full */
 #ifdef CONFIG_TEGRA_NVMAP
 			+ nvmap_page_pool_get_unused_pages()
 #endif
@@ -149,6 +151,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	other_file = global_page_state(NR_FILE_PAGES)
 			- global_page_state(NR_SHMEM)
 			- total_swapcache_pages();
+
+	/* this is basically 50% until killing is allowed */
+	if (swap_wait == true)
+		other_free += swap_info.freeswap;
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
@@ -226,7 +232,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			task_unlock(p);
 			continue;
 		}
-		/* if enabled this bypasses all low memory calculations, so use with care! */
+		/* if enabled this will bypasses all low memory calculations, so use with care! */
 		if ((swap_wait == true) && (swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
 			task_unlock(p);
 			continue;
