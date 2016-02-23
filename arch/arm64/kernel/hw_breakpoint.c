@@ -866,7 +866,7 @@ static int hw_breakpoint_reset_notify(struct notifier_block *self,
 						void *hcpu)
 {
 	int cpu = (long)hcpu;
-	if (action == CPU_ONLINE)
+	if ((action & ~CPU_TASKS_FROZEN) == CPU_ONLINE)
 		smp_call_function_single(cpu, reset_ctrl_regs, NULL, 1);
 	return NOTIFY_OK;
 }
