@@ -324,6 +324,7 @@ void nvhost_free_error_notifiers(struct nvhost_channel *ch)
 static int nvhost_init_error_notifier(struct nvhost_channel *ch,
 		struct nvhost_set_error_notifier *args) {
 	void *va;
+	u64 end = args->offset + sizeof(struct nvhost_notification);
 
 	struct dma_buf *dmabuf;
 	if (!args->mem) {
@@ -341,7 +342,13 @@ static int nvhost_init_error_notifier(struct nvhost_channel *ch,
 		return -EINVAL;
 	}
 
-	/* map handle */
+	if (end > dmabuf->size || end < sizeof(struct nvhost_notification)) {
+		dma_buf_put(dmabuf);
+		pr_err("%s: invalid offset\n", __func__);
+		return -EINVAL;
+	}
+
+	/* map handle and clear error notifier struct */
 	va = dma_buf_vmap(dmabuf);
 	if (!va) {
 		dma_buf_put(dmabuf);
