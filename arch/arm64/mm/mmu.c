@@ -453,6 +453,9 @@ void __init paging_init(void)
 	empty_zero_page = (ulong)early_alloc(PAGE_SIZE << zero_page_order);
 	zero_page_mask = ((PAGE_SIZE << zero_page_order) - 1) & PAGE_MASK;
 
+	/* Ensure the zero page is visible to the page table walker */
+	dsb();
+
 	bootmem_init();
 
 

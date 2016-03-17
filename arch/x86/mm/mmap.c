@@ -35,12 +35,12 @@ struct __read_mostly va_alignment va_align = {
 	.flags = -1,
 };
 
-static unsigned int stack_maxrandom_size(void)
+static unsigned long stack_maxrandom_size(void)
 {
-	unsigned int max = 0;
+	unsigned long max = 0;
 	if ((current->flags & PF_RANDOMIZE) &&
 		!(current->personality & ADDR_NO_RANDOMIZE)) {
-		max = ((-1U) & STACK_RND_MASK) << PAGE_SHIFT;
+		max = ((-1UL) & STACK_RND_MASK) << PAGE_SHIFT;
 	}
 
 	return max;
@@ -72,12 +72,12 @@ static unsigned long mmap_rnd(void)
 	if (current->flags & PF_RANDOMIZE) {
 		if (mmap_is_ia32())
 #ifdef CONFIG_COMPAT
-			rnd = (unsigned long)get_random_int() & ((1 << mmap_rnd_compat_bits) - 1);
+			rnd = get_random_long() & ((1UL << mmap_rnd_compat_bits) - 1);
 #else
-			rnd = (unsigned long)get_random_int() & ((1 << mmap_rnd_bits) - 1);
+			rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
 #endif
 		else
-			rnd = (unsigned long)get_random_int() & ((1 << mmap_rnd_bits) - 1);
+			rnd = get_random_long() & ((1UL << mmap_rnd_bits) - 1);
 	}
 	return rnd << PAGE_SHIFT;
 }

@@ -362,7 +362,7 @@ exit:
  * for scheduling or signal handling. The actual stack switch is done in
  * entry.S
  */
-asmlinkage __kprobes struct pt_regs *sync_regs(struct pt_regs *eregs)
+asmlinkage notrace __kprobes struct pt_regs *sync_regs(struct pt_regs *eregs)
 {
 	struct pt_regs *regs = eregs;
 	/* Did already sync */
@@ -380,6 +380,35 @@ asmlinkage __kprobes struct pt_regs *sync_regs(struct pt_regs *eregs)
 	if (eregs != regs)
 		*regs = *eregs;
 	return regs;
+}
+
+struct bad_iret_stack {
+	void *error_entry_ret;
+	struct pt_regs regs;
+};
+
+asmlinkage __visible notrace __kprobes
+struct bad_iret_stack *fixup_bad_iret(struct bad_iret_stack *s)
+{
+	/*
+	 * This is called from entry_64.S early in handling a fault
+	 * caused by a bad iret to user mode.  To handle the fault
+	 * correctly, we want move our stack frame to task_pt_regs
+	 * and we want to pretend that the exception came from the
+	 * iret target.
+	 */
+	struct bad_iret_stack *new_stack =
+		container_of(task_pt_regs(current),
+			     struct bad_iret_stack, regs);
+
+	/* Copy the IRET target to the new stack. */
+	memmove(&new_stack->regs.ip, (void *)s->regs.sp, 5*8);
+
+	/* Copy the remainder of the stack from the current stack. */
+	memmove(new_stack, s, offsetof(struct bad_iret_stack, regs.ip));
+
+	BUG_ON(!user_mode_vm(&new_stack->regs));
+	return new_stack;
 }
 #endif
 
