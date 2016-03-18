@@ -1910,10 +1910,10 @@ static int mdm_init(struct qcom_usb_modem *modem, struct platform_device *pdev)
 	modem->hsic_wakeup_pending = false;
 
 #ifdef CONFIG_MDM_FTRACE_DEBUG
-	memset(modem->ftrace_cmd, sizeof(modem->ftrace_cmd), 0);
+	memset(modem->ftrace_cmd, 0, sizeof(modem->ftrace_cmd));
 #endif
 #ifdef CONFIG_MSM_SYSMON_COMM
-	memset(modem->msr_info_list, sizeof(modem->msr_info_list), 0);
+	memset(modem->msr_info_list, 0, sizeof(modem->msr_info_list));
 	modem->mdm_msr_index = 0;
 #endif
 
