@@ -1462,6 +1462,15 @@ static int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_info("pre-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
+	/* an address space needs to have been bound at this point.   */
+	if (!gk20a_channel_as_bound(c)) {
+		gk20a_err(d,
+				"not bound to an address space at time of gpfifo"
+				" submit.  Attempting to create and bind to"
+				" one...");
+		return -EINVAL;
+	}
+
 	/* Invalidate tlb if it's dirty...                                   */
 	/* TBD: this should be done in the cmd stream, not with PRIs.        */
 	/* We don't know what context is currently running...                */
