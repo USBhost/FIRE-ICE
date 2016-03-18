@@ -858,6 +858,11 @@ static int tegra_adf_set_proposed_bw(struct tegra_adf_info *adf_info,
 		goto done;
 	}
 
+	if (win_num != bw->win_num) {
+		ret = -EINVAL;
+		goto done;
+	}
+
 	ret = tegra_adf_negotiate_bw(adf_info, bw);
 done:
 	kfree(bw);

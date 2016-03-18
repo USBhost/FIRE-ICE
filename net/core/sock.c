@@ -87,8 +87,6 @@
  *		modify it under the terms of the GNU General Public License
  *		as published by the Free Software Foundation; either version
  *		2 of the License, or (at your option) any later version.
- *
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -141,10 +139,57 @@
 #include <net/tcp.h>
 #endif
 
-#include <linux/eventpoll.h>
-
 static DEFINE_MUTEX(proto_list_mutex);
 static LIST_HEAD(proto_list);
+
+/**
+ * sk_ns_capable - General socket capability test
+ * @sk: Socket to use a capability on or through
+ * @user_ns: The user namespace of the capability to use
+ * @cap: The capability to use
+ *
+ * Test to see if the opener of the socket had when the socket was
+ * created and the current process has the capability @cap in the user
+ * namespace @user_ns.
+ */
+bool sk_ns_capable(const struct sock *sk,
+		   struct user_namespace *user_ns, int cap)
+{
+	return file_ns_capable(sk->sk_socket->file, user_ns, cap) &&
+		ns_capable(user_ns, cap);
+}
+EXPORT_SYMBOL(sk_ns_capable);
+
+/**
+ * sk_capable - Socket global capability test
+ * @sk: Socket to use a capability on or through
+ * @cap: The global capbility to use
+ *
+ * Test to see if the opener of the socket had when the socket was
+ * created and the current process has the capability @cap in all user
+ * namespaces.
+ */
+bool sk_capable(const struct sock *sk, int cap)
+{
+	return sk_ns_capable(sk, &init_user_ns, cap);
+}
+EXPORT_SYMBOL(sk_capable);
+
+/**
+ * sk_net_capable - Network namespace socket capability test
+ * @sk: Socket to use a capability on or through
+ * @cap: The capability to use
+ *
+ * Test to see if the opener of the socket had when the socke was created
+ * and the current process has the capability @cap over the network namespace
+ * the socket is a member of.
+ */
+bool sk_net_capable(const struct sock *sk, int cap)
+{
+	return sk_ns_capable(sk, sock_net(sk)->user_ns, cap);
+}
+EXPORT_SYMBOL(sk_net_capable);
+
 
 #ifdef CONFIG_MEMCG_KMEM
 int mem_cgroup_sockets_init(struct mem_cgroup *memcg, struct cgroup_subsys *ss)
@@ -373,8 +418,6 @@ static void sock_warn_obsolete_bsdism(const char *name)
 		warned++;
 	}
 }
-
-#define SK_FLAGS_TIMESTAMP ((1UL << SOCK_TIMESTAMP) | (1UL << SOCK_TIMESTAMPING_RX_SOFTWARE))
 
 static void sock_disable_timestamp(struct sock *sk, unsigned long flags)
 {
@@ -2519,142 +2562,6 @@ void sk_common_release(struct sock *sk)
 	sock_put(sk);
 }
 EXPORT_SYMBOL(sk_common_release);
-
-char *sk_get_waiting_task_cmdline(struct sock *sk, char *cmdline)
-{
-	bool softirq_enabled = false;
-	int res = 0;
-	unsigned int len;
-	char *program_name = cmdline;
-	struct task_struct *task = NULL;
-	struct mm_struct *mm = NULL;
-	static char *apk_path_prefix = "/data/data";
-	wait_queue_t *wq = NULL;
-	struct list_head *lh = NULL;
-	struct socket_wq *sk_wq = NULL;
-	wait_queue_func_t wait_func;
-	enum pid_type type;
-	struct pid *pid = NULL;
-	struct fown_struct *fown = NULL;
-	struct file *file;
-	int preempt_count;
-
-	*program_name = '\0';
-
-	if (!sk || !sk->sk_wq)
-		goto out;
-	lh = sk->sk_wq->wait.task_list.next;
-	if (!wq_has_sleeper(sk->sk_wq)) {
-		sk_wq = sk->sk_wq;
-		if (sk_wq->fasync_list && sk_wq->fasync_list->fa_file) {
-			fown = &sk_wq->fasync_list->fa_file->f_owner;
-			pid = fown->pid;
-			type = fown->pid_type;
-			do_each_pid_task(pid, type, task) {
-				if (task)
-					break;
-			} while_each_pid_task(pid, type, task);
-		}
-	} else {
-		lh = sk->sk_wq->wait.task_list.next;
-		wq = list_entry(lh, wait_queue_t, task_list);
-
-		wait_func = wq->func;
-		if (wait_func == pollwake)
-			task = ((struct poll_wqueues *)
-				(wq->private))->polling_task;
-		else if (wait_func == default_wake_function)
-			task = (struct task_struct *)(wq->private);
-		else if (wait_func == ep_poll_callback)
-			task = (struct task_struct *)(wq->private);
-		else if (wait_func == autoremove_wake_function)
-			task = (struct task_struct *)(wq->private);
-		else
-			pr_warning("Unknown wakeup:%p.\n", wait_func);
-
-		if (task)
-			task = get_thread_process(task);
-	}
-
-#ifdef CONFIG_EPOLL
-	if (!task) {
-		file = sk->sk_socket->file;
-		if (file)
-			task = get_epoll_file_task(file);
-	}
-#endif
-
-	if (!task && sk && sk->sk_socket)
-		task = SOCK_INODE(sk->sk_socket)->i_private;
-
-	if (!task) {
-		pr_err("Can't find a process for this sock.\n");
-		goto out;
-	}
-
-	mm = get_task_mm(task);
-	if (mm && mm->arg_end) {
-		len = mm->arg_end - mm->arg_start;
-
-		if (len > PAGE_SIZE)
-			len = PAGE_SIZE;
-
-		if (softirq_count()) {
-			softirq_enabled = true;
-			local_bh_enable();
-		}
-		if (preempt_count()) {
-			preempt_count = preempt_count();
-			preempt_count() = 0;
-		}
-
-		res = access_process_vm(task, mm->arg_start, cmdline, len, 0);
-
-		if (res > 0 && cmdline[res-1] != '\0' && len < PAGE_SIZE) {
-			len = strnlen(cmdline, res);
-			if (len < res) {
-				res = len;
-			} else {
-				len = mm->env_end - mm->env_start;
-				if (len > PAGE_SIZE - res)
-					len = PAGE_SIZE - res;
-				res += access_process_vm(task,
-					mm->env_start, cmdline+res, len, 0);
-				res = strnlen(cmdline, res);
-			}
-		}
-
-		if (preempt_count)
-			preempt_count() = preempt_count;
-		if (softirq_enabled)
-			local_bh_disable();
-
-		if (res > PAGE_SIZE)
-			cmdline[PAGE_SIZE-1] = '\0';
-
-		len = strlen(apk_path_prefix);
-		if (!strncmp(apk_path_prefix, program_name, len))
-			program_name += len;
-		else
-			program_name = strrchr(cmdline, '/');
-
-		if (program_name == NULL)
-			program_name = cmdline;
-		else
-			program_name++;
-	}
-
-	if (mm)
-		mmput(mm);
-
-	len = strlen(program_name);
-	snprintf(program_name + len, PAGE_SIZE-(program_name-cmdline)-len,
-		 " %d %s", task->pid, task->comm);
-out:
-	return program_name;
-}
-EXPORT_SYMBOL(sk_get_waiting_task_cmdline);
-
 
 #ifdef CONFIG_PROC_FS
 #define PROTO_INUSE_NR	64	/* should be enough for the first time */
