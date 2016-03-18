@@ -444,7 +444,7 @@ static void tegra_get_tegraid_from_hw(void)
 	u32 nlist;
 	char *priv = NULL;
 
-#ifndef CONFIG_ARM64
+#ifdef CONFIG_ARM64
 	cid = tegra_read_chipid();
 	nlist = tegra_read_apb_misc_reg(0x860);
 #else
