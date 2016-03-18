@@ -110,18 +110,6 @@ static struct device_dma_parameters tegra_dc_dma_parameters = {
 	.max_segment_size = UINT_MAX,
 };
 
-static const struct {
-	bool h;
-	bool v;
-} can_filter[] = {
-	/* Window A has no filtering */
-	{ false, false },
-	/* Window B has both H and V filtering */
-	{ true,  true  },
-	/* Window C has only H filtering */
-	{ false, true  },
-};
-
 #ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu default_cmu = {
 	/* lut1 maps sRGB to linear space. */

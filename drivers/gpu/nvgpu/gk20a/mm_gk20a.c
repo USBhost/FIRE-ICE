@@ -120,7 +120,6 @@ static const u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, SZ_128K };
 static const u32 gmmu_page_shifts[gmmu_nr_page_sizes] = { 12, 17 };
 static const u64 gmmu_page_offset_masks[gmmu_nr_page_sizes] = { 0xfffLL,
 								0x1ffffLL };
-static const u64 gmmu_page_masks[gmmu_nr_page_sizes] = { ~0xfffLL, ~0x1ffffLL };
 
 struct gk20a_comptags {
 	u32 offset;
