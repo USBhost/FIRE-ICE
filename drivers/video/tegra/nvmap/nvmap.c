@@ -288,6 +288,9 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	}
 
 	/* carveout - explicitly map the pfns into a vmalloc area */
+	if (!h->carveout)
+		return NULL;
+
 	adj_size = h->carveout->base & ~PAGE_MASK;
 	adj_size += h->size;
 	adj_size = PAGE_ALIGN(adj_size);
