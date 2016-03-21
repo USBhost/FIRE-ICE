@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -328,9 +328,15 @@ void nvhost_free_error_notifiers(struct nvhost_channel *ch)
 static int nvhost_init_error_notifier(struct nvhost_channel *ch,
 		struct nvhost_set_error_notifier *args) {
 	void *va;
-	u64 end = args->offset + sizeof(struct nvhost_notification);
-
+	u64 end;
 	struct dma_buf *dmabuf;
+
+	if (unlikely(args->offset >
+		     U64_MAX - sizeof(struct nvhost_notification)))
+		return -EINVAL;
+
+	end = args->offset + sizeof(struct nvhost_notification);
+
 	if (!args->mem) {
 		dev_err(&ch->dev->dev, "invalid memory handle\n");
 		return -EINVAL;
