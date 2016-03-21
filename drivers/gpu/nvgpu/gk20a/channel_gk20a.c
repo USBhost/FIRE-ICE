@@ -3,7 +3,7 @@
  *
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -525,7 +525,13 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 {
 	struct dma_buf *dmabuf;
 	void *va;
-	u64 end = args->offset + sizeof(struct nvhost_notification);
+	u64 end;
+
+	if (unlikely(args->offset >
+		     U64_MAX - sizeof(struct nvhost_notification)))
+		return -EINVAL;
+
+	end = args->offset + sizeof(struct nvhost_notification);
 
 	if (!args->mem) {
 		pr_err("gk20a_init_error_notifier: invalid memory handle\n");
@@ -1734,6 +1740,10 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 	case NVHOST_WAIT_TYPE_NOTIFIER:
 		id = args->condition.notifier.nvmap_handle;
 		offset = args->condition.notifier.offset;
+
+		if (unlikely(offset > U32_MAX - sizeof(struct notification)))
+			return -EINVAL;
+
 		end = offset + sizeof(struct notification);
 
 		dmabuf = dma_buf_get(id);
