@@ -153,7 +153,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			- total_swapcache_pages();
 
 	/* this is basically 50% until killing is allowed */
-	if (swap_wait == true)
+	if ((swap_wait == true) && (swap_wait_percent == 1))
 		other_free += swap_info.freeswap;
 
 	if (lowmem_adj_size < array_size)
@@ -232,8 +232,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			task_unlock(p);
 			continue;
 		}
-		/* if enabled this will bypasses all low memory calculations, so use with care! */
-		if ((swap_wait == true) && (swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
+		/* This will bypasses all low memory calculations if enabled, so use with care! */
+		/* Note: multiplication is not allowed here. I have to use division */
+		if ((swap_wait == true) && (swap_wait_percent > 1) && 
+		(swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
 			task_unlock(p);
 			continue;
 		}
