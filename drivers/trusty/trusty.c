@@ -27,7 +27,9 @@
 struct trusty_state {
 	struct mutex smc_lock;
 	struct atomic_notifier_head notifier;
+	struct completion cpu_idle_completion;
 	char *version_str;
+	u32 api_version;
 };
 
 #ifdef CONFIG_ARM64
@@ -106,6 +108,8 @@ static ulong trusty_std_call_inner(struct device *dev, ulong smcnr,
 		__func__, smcnr, a0, a1, a2);
 	while (true) {
 		ret = smc(smcnr, a0, a1, a2);
+		while ((s32)ret == SM_ERR_FIQ_INTERRUPTED)
+			ret = smc(SMC_SC_RESTART_FIQ, 0, 0, 0);
 		if ((int)ret != SM_ERR_BUSY || !retry)
 			break;
 
@@ -157,6 +161,17 @@ static ulong trusty_std_call_helper(struct device *dev, ulong smcnr,
 	return ret;
 }
 
+static void trusty_std_call_cpu_idle(struct trusty_state *s)
+{
+	int ret;
+
+	ret = wait_for_completion_timeout(&s->cpu_idle_completion, HZ * 10);
+	if (!ret) {
+		pr_warn("%s: timed out waiting for cpu idle to clear, retry anyway\n",
+			__func__);
+	}
+}
+
 s32 trusty_std_call32(struct device *dev, u32 smcnr, u32 a0, u32 a1, u32 a2)
 {
 	int ret;
@@ -165,21 +180,31 @@ s32 trusty_std_call32(struct device *dev, u32 smcnr, u32 a0, u32 a1, u32 a2)
 	BUG_ON(SMC_IS_FASTCALL(smcnr));
 	BUG_ON(SMC_IS_SMC64(smcnr));
 
-	mutex_lock(&s->smc_lock);
+	if (smcnr != SMC_SC_NOP) {
+		mutex_lock(&s->smc_lock);
+		INIT_COMPLETION(s->cpu_idle_completion);
+	}
 
 	dev_dbg(dev, "%s(0x%x 0x%x 0x%x 0x%x) started\n",
 		__func__, smcnr, a0, a1, a2);
 
 	ret = trusty_std_call_helper(dev, smcnr, a0, a1, a2);
-	while (ret == SM_ERR_INTERRUPTED) {
+	while (ret == SM_ERR_INTERRUPTED || ret == SM_ERR_CPU_IDLE) {
 		dev_dbg(dev, "%s(0x%x 0x%x 0x%x 0x%x) interrupted\n",
 			__func__, smcnr, a0, a1, a2);
+		if (ret == SM_ERR_CPU_IDLE)
+			trusty_std_call_cpu_idle(s);
 		ret = trusty_std_call_helper(dev, SMC_SC_RESTART_LAST, 0, 0, 0);
 	}
 	dev_dbg(dev, "%s(0x%x 0x%x 0x%x 0x%x) returned 0x%x\n",
 		__func__, smcnr, a0, a1, a2, ret);
 
-	mutex_unlock(&s->smc_lock);
+	WARN_ONCE(ret == SM_ERR_PANIC, "trusty crashed");
+
+	if (smcnr == SMC_SC_NOP)
+		complete(&s->cpu_idle_completion);
+	else
+		mutex_unlock(&s->smc_lock);
 
 	return ret;
 }
@@ -262,6 +287,35 @@ err_get_size:
 	dev_err(dev, "failed to get version: %d\n", ret);
 }
 
+u32 trusty_get_api_version(struct device *dev)
+{
+	struct trusty_state *s = platform_get_drvdata(to_platform_device(dev));
+
+	return s->api_version;
+}
+EXPORT_SYMBOL(trusty_get_api_version);
+
+static int trusty_init_api_version(struct trusty_state *s, struct device *dev)
+{
+	u32 api_version;
+	api_version = trusty_fast_call32(dev, SMC_FC_API_VERSION,
+					 TRUSTY_API_VERSION_CURRENT, 0, 0);
+	if (api_version == SM_ERR_UNDEFINED_SMC)
+		api_version = 0;
+
+	if (api_version > TRUSTY_API_VERSION_CURRENT) {
+		dev_err(dev, "unsupported api version %u > %u\n",
+			api_version, TRUSTY_API_VERSION_CURRENT);
+		return -EINVAL;
+	}
+
+	dev_info(dev, "selected api version: %u (requested %u)\n",
+		 api_version, TRUSTY_API_VERSION_CURRENT);
+	s->api_version = api_version;
+
+	return 0;
+}
+
 static int trusty_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -280,9 +334,14 @@ static int trusty_probe(struct platform_device *pdev)
 	}
 	mutex_init(&s->smc_lock);
 	ATOMIC_INIT_NOTIFIER_HEAD(&s->notifier);
+	init_completion(&s->cpu_idle_completion);
 	platform_set_drvdata(pdev, s);
 
 	trusty_init_version(s, &pdev->dev);
+
+	ret = trusty_init_api_version(s, &pdev->dev);
+	if (ret < 0)
+		goto err_api_version;
 
 	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
 	if (ret < 0) {
@@ -293,6 +352,7 @@ static int trusty_probe(struct platform_device *pdev)
 	return 0;
 
 err_add_children:
+err_api_version:
 	if (s->version_str) {
 		device_remove_file(&pdev->dev, &dev_attr_trusty_version);
 		kfree(s->version_str);
