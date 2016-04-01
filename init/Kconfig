@@ -1211,6 +1211,18 @@ source "usr/Kconfig"
 
 endif
 
+config DEBUG_COMPILE
+	bool "For testing"
+	select DEBUG_BUGVERBOSE
+	select DEBUG_INFO
+	select FRAME_POINTER
+	select KALLSYMS
+	depends on !USER_COMPILE
+
+config USER_COMPILE
+	bool "Optimize for the USER"
+	default y
+	
 config CC_OPTIMIZE_FOR_SIZE
 	bool "Optimize for size"
 	help
@@ -1218,6 +1230,7 @@ config CC_OPTIMIZE_FOR_SIZE
 	  resulting in a smaller kernel.
 
 	  If unsure, say N.
+
 
 config SYSCTL
 	bool
@@ -1293,6 +1306,7 @@ config SYSCTL_SYSCALL
 
 config KALLSYMS
 	 bool "Load all symbols for debugging/ksymoops" if EXPERT
+	 depends on !USER_COMPILE
 	 default y
 	 help
 	   Say Y here to let the kernel print out symbolic crash information and
