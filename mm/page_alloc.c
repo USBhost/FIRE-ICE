@@ -1159,10 +1159,6 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 	return NULL;
 }
 
-#ifdef CONFIG_CMA
-unsigned long cma_get_total_pages(void);
-#endif
-
 /*
  * Do the hard work of removing an element from the buddy allocator.
  * Call me with the zone->lock already held.
@@ -1170,24 +1166,10 @@ unsigned long cma_get_total_pages(void);
 static struct page *__rmqueue(struct zone *zone, unsigned int order,
 						int migratetype)
 {
-	struct page *page = NULL;
+	struct page *page;
 
 retry_reserve:
-#ifdef CONFIG_CMA
-	if (migratetype == MIGRATE_MOVABLE) {
-
-		unsigned long nr_cma_pages = cma_get_total_pages();
-		unsigned long nr_free_cma_pages =
-			global_page_state(NR_FREE_CMA_PAGES);
-		unsigned int current_cma_usage = 100 -
-			((nr_free_cma_pages * 100) / nr_cma_pages);
-
-		if (current_cma_usage < cma_threshold_get())
-			page = __rmqueue_smallest(zone, order, MIGRATE_CMA);
-	}
-	if (!page)
-#endif
-		page = __rmqueue_smallest(zone, order, migratetype);
+	page = __rmqueue_smallest(zone, order, migratetype);
 
 	if (unlikely(!page) && migratetype != MIGRATE_RESERVE) {
 		page = __rmqueue_fallback(zone, order, migratetype);
