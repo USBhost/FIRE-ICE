@@ -1082,11 +1082,12 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 	struct free_area * area;
 	unsigned int current_order;
 	struct page *page;
+	unsigned int non_cma_order;
 
 	/* Find the largest possible block of pages in the other list */
-	for (current_order = MAX_ORDER-1;
-				current_order >= order && current_order <= MAX_ORDER-1;
-				--current_order) {
+	for (non_cma_order = MAX_ORDER-1;
+				non_cma_order >= order && non_cma_order <= MAX_ORDER-1;
+				--non_cma_order) {
 		int i;
 		for (i = 0;; i++) {
 			int migratetype = fallbacks[start_migratetype][i];
@@ -1095,6 +1096,18 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 			/* MIGRATE_RESERVE handled later if necessary */
 			if (migratetype == MIGRATE_RESERVE)
 				break;
+
+			if (is_migrate_cma(migratetype))
+				/* CMA page blocks are not movable across
+				 * migrate types. Seach for free blocks
+				 * from lowest order to avoid contiguous
+				 * higher alignment allocations for subsequent
+				 * alloc requests.
+				 */
+				current_order = order + MAX_ORDER - 1 -
+						non_cma_order;
+			else
+				current_order = non_cma_order;
 
 			area = &(zone->free_area[current_order]);
 			if (list_empty(&area->free_list[migratetype]))

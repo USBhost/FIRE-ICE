@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -61,6 +61,10 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	int err = 0;
 	struct resource *r;
 	struct nvhost_device_data *pdata = platform_get_drvdata(ndev);
+
+	/* check if offset is u32 aligned */
+	if (offset & 3)
+		return -EINVAL;
 
 	r = platform_get_resource(pdata->master ? pdata->master : ndev,
 			IORESOURCE_MEM, 0);
@@ -324,8 +328,15 @@ void nvhost_free_error_notifiers(struct nvhost_channel *ch)
 static int nvhost_init_error_notifier(struct nvhost_channel *ch,
 		struct nvhost_set_error_notifier *args) {
 	void *va;
-
+	u64 end;
 	struct dma_buf *dmabuf;
+
+	if (unlikely(args->offset >
+		     U64_MAX - sizeof(struct nvhost_notification)))
+		return -EINVAL;
+
+	end = args->offset + sizeof(struct nvhost_notification);
+
 	if (!args->mem) {
 		dev_err(&ch->dev->dev, "invalid memory handle\n");
 		return -EINVAL;
@@ -341,7 +352,13 @@ static int nvhost_init_error_notifier(struct nvhost_channel *ch,
 		return -EINVAL;
 	}
 
-	/* map handle */
+	if (end > dmabuf->size || end < sizeof(struct nvhost_notification)) {
+		dma_buf_put(dmabuf);
+		pr_err("%s: invalid offset\n", __func__);
+		return -EINVAL;
+	}
+
+	/* map handle and clear error notifier struct */
 	va = dma_buf_vmap(dmabuf);
 	if (!va) {
 		dma_buf_put(dmabuf);

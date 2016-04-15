@@ -794,6 +794,36 @@ static void tegra_adf_dev_state_free(struct adf_device *dev, void *driver_state)
 	kfree(driver_state);
 }
 
+static int tegra_adf_sanitize_proposed_bw(struct tegra_adf_info *adf_info,
+		const struct tegra_adf_proposed_bw *bw, u8 win_num)
+{
+	struct device *dev = &adf_info->base.base.dev;
+	struct tegra_dc *dc = adf_info->dc;
+	u8 i;
+
+	if (win_num != bw->win_num)
+		return -EINVAL;
+
+	if (win_num > DC_N_WINDOWS) {
+		dev_err(dev, "too many windows (%u > %u)\n", win_num,
+				DC_N_WINDOWS);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < win_num; i++) {
+		s32 index = bw->win[i].attr.win_index;
+
+		if (index < 0 ||
+				index >= DC_N_WINDOWS ||
+				!test_bit(index, &dc->valid_windows)) {
+			dev_err(dev, "invalid window index %u\n", index);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
 static int tegra_adf_negotiate_bw(struct tegra_adf_info *adf_info,
 			struct tegra_adf_proposed_bw *bw)
 {
@@ -858,10 +888,9 @@ static int tegra_adf_set_proposed_bw(struct tegra_adf_info *adf_info,
 		goto done;
 	}
 
-	if (win_num != bw->win_num) {
-		ret = -EINVAL;
+	ret = tegra_adf_sanitize_proposed_bw(adf_info, bw, win_num);
+	if (ret < 0)
 		goto done;
-	}
 
 	ret = tegra_adf_negotiate_bw(adf_info, bw);
 done:

@@ -613,30 +613,6 @@ static struct miscdevice imx219_device = {
 };
 
 #ifdef CONFIG_DEBUG_FS
-static int imx219_stats_show(struct seq_file *s, void *data)
-{
-	static struct imx219_info *info;
-
-	seq_printf(s, "%-20s : %-20s\n", "Name", "imx219-debugfs-testing");
-	seq_printf(s, "%-20s : 0x%X\n", "Current i2c-offset Addr",
-			info->debug_i2c_offset);
-	seq_printf(s, "%-20s : 0x%X\n", "DC BLC Enabled",
-			info->debug_i2c_offset);
-	return 0;
-}
-
-static int imx219_stats_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, imx219_stats_show, inode->i_private);
-}
-
-static const struct file_operations imx219_stats_fops = {
-	.open       = imx219_stats_open,
-	.read       = seq_read,
-	.llseek     = seq_lseek,
-	.release    = single_release,
-};
-
 static int debug_i2c_offset_w(void *data, u64 val)
 {
 	struct imx219_info *info = (struct imx219_info *)(data);
@@ -711,10 +687,6 @@ static int imx219_debug_init(struct imx219_info *info)
 	info->debugfs_root = debugfs_create_dir(imx219_device.name, NULL);
 
 	if (!info->debugfs_root)
-		goto err_out;
-
-	if (!debugfs_create_file("stats", S_IRUGO,
-			info->debugfs_root, info, &imx219_stats_fops))
 		goto err_out;
 
 	if (!debugfs_create_file("offset", S_IRUGO | S_IWUSR,

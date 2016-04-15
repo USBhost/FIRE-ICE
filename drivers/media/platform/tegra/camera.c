@@ -131,12 +131,12 @@ int camera_copy_user_params(unsigned long arg, struct nvc_param *prm)
 }
 #endif
 
-int camera_get_params(
+int __camera_get_params(
 	struct camera_info *cam, unsigned long arg, int u_size,
-	struct nvc_param *prm, void **data)
+	struct nvc_param *prm, void **data, bool zero_size_ok)
 {
 	void *buf;
-	unsigned size;
+	size_t size;
 
 #ifdef CONFIG_COMPAT
 	memset(prm, 0, sizeof(*prm));
@@ -156,9 +156,14 @@ int camera_get_params(
 	if (!data)
 		return 0;
 
+	if (zero_size_ok && prm->sizeofvalue == 0) {
+		*data = ZERO_SIZE_PTR;
+		return 0;
+	}
+
 	size = prm->sizeofvalue * u_size;
-	buf = kzalloc(size, GFP_KERNEL);
-	if (!buf) {
+	buf = kcalloc(prm->sizeofvalue, u_size, GFP_KERNEL);
+	if (ZERO_OR_NULL_PTR(buf)) {
 		dev_err(cam->dev, "%s allocate memory failed!\n", __func__);
 		return -ENOMEM;
 	}
@@ -173,6 +178,20 @@ int camera_get_params(
 	return 0;
 }
 
+static int camera_validate_p_i2c_table(struct camera_info *cam,
+		const struct nvc_param *params,
+		const struct camera_reg *p_i2c_table, const char *caller)
+{
+	u32 idx, last_idx = params->sizeofvalue / sizeof(p_i2c_table[0]);
+
+	for (idx = 0; idx < last_idx; idx++)
+		if (p_i2c_table[idx].addr == CAMERA_TABLE_END)
+			return 0;
+
+	dev_err(cam->dev, "%s: table is not properly terminated\n", caller);
+	return -EINVAL;
+}
+
 static int camera_seq_rd(struct camera_info *cam, unsigned long arg)
 {
 	struct nvc_param params;
@@ -184,6 +203,10 @@ static int camera_seq_rd(struct camera_info *cam, unsigned long arg)
 	if (err)
 		return err;
 
+	err = camera_validate_p_i2c_table(cam, &params, p_i2c_table, __func__);
+	if (err)
+		goto seq_rd_end;
+
 	err = camera_dev_rd_table(cam->cdev, p_i2c_table);
 	if (!err && copy_to_user(MAKE_USER_PTR(params.p_value),
 		p_i2c_table, params.sizeofvalue)) {
@@ -192,6 +215,7 @@ static int camera_seq_rd(struct camera_info *cam, unsigned long arg)
 		err = -EINVAL;
 	}
 
+seq_rd_end:
 	kfree(p_i2c_table);
 	return err;
 }
@@ -231,7 +255,7 @@ static int camera_seq_wr(struct camera_info *cam, unsigned long arg)
 	}
 
 	p_i2c_table = devm_kzalloc(cdev->dev, params.sizeofvalue, GFP_KERNEL);
-	if (p_i2c_table == NULL) {
+	if (ZERO_OR_NULL_PTR(p_i2c_table)) {
 		dev_err(cam->dev, "%s devm_kzalloc err line %d\n",
 			__func__, __LINE__);
 		return -ENOMEM;
@@ -245,6 +269,10 @@ static int camera_seq_wr(struct camera_info *cam, unsigned long arg)
 		err = -EFAULT;
 		goto seq_wr_end;
 	}
+
+	err = camera_validate_p_i2c_table(cam, &params, p_i2c_table, __func__);
+	if (err)
+		goto seq_wr_end;
 
 	switch (params.param) {
 	case CAMERA_SEQ_REGISTER_EXEC:
@@ -586,7 +614,8 @@ static int camera_update(struct camera_info *cam, unsigned long arg)
 		return err;
 	}
 
-	err = camera_get_params(cam, arg, sizeof(*upd), &param, (void **)&upd);
+	err = __camera_get_params(cam, arg, sizeof(*upd), &param, (void **)&upd,
+			true);
 	if (err)
 		return err;
 

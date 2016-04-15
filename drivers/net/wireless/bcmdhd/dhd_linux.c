@@ -6009,12 +6009,6 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #endif /* CONFIG_BCMDHD_PCIE */
 #endif /* EAPOL_PKT_PRIO */
 
-#ifdef EAPOL_PKT_PRIO
-#ifdef CONFIG_BCMDHD_PCIE
-	dhd_update_flow_prio_map(dhd, DHD_FLOW_PRIO_LLR_MAP);
-#endif /* CONFIG_BCMDHD_PCIE */
-#endif /* EAPOL_PKT_PRIO */
-
 	/* Write updated Event mask */
 	bcm_mkiovar("event_msgs", eventmask, WL_EVENTING_MASK_LEN, iovbuf, sizeof(iovbuf));
 	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
@@ -8341,8 +8335,8 @@ dhd_dev_start_mkeep_alive(dhd_pub_t *dhd_pub, u8 mkeep_alive_id, u8 *ip_pkt, u16
 	const char		*str;
 	wl_mkeep_alive_pkt_t mkeep_alive_pkt = {0};
 	wl_mkeep_alive_pkt_t *mkeep_alive_pktp;
-	int				buf_len;
-	int				str_len;
+	int			buf_len;
+	int			str_len;
 	int 			res = BCME_ERROR;
 	int 			len_bytes = 0;
 	int 			i;

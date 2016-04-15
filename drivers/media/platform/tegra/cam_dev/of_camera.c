@@ -222,7 +222,7 @@ int of_camera_get_property(struct camera_info *cam, unsigned long arg)
 	}
 
 	/* sanity check */
-	if (!param.sizeofvalue) {
+	if (!param.sizeofvalue || param.sizeofvalue > INT_MAX) {
 		dev_err(cam->dev, "%s invalid property name length %d\n",
 			__func__, param.sizeofvalue);
 		return -EBADF;

@@ -3,7 +3,7 @@
  *
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -521,10 +521,17 @@ static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
 #endif
 
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
-		struct nvhost_set_error_notifier *args) {
-	void *va;
-
+		struct nvhost_set_error_notifier *args)
+{
 	struct dma_buf *dmabuf;
+	void *va;
+	u64 end;
+
+	if (unlikely(args->offset >
+		     U64_MAX - sizeof(struct nvhost_notification)))
+		return -EINVAL;
+
+	end = args->offset + sizeof(struct nvhost_notification);
 
 	if (!args->mem) {
 		pr_err("gk20a_init_error_notifier: invalid memory handle\n");
@@ -540,6 +547,13 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		pr_err("Invalid handle: %d\n", args->mem);
 		return -EINVAL;
 	}
+
+	if (end > dmabuf->size || end < sizeof(struct nvhost_notification)) {
+		dma_buf_put(dmabuf);
+		pr_err("gk20a_init_error_notifier: invalid offset\n");
+		return -EINVAL;
+	}
+
 	/* map handle */
 	va = dma_buf_vmap(dmabuf);
 	if (!va) {
@@ -1710,6 +1724,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 	u32 offset;
 	unsigned long timeout;
 	int remain, ret = 0;
+	u64 end;
 
 	gk20a_dbg_fn("");
 
@@ -1726,10 +1741,21 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 		id = args->condition.notifier.nvmap_handle;
 		offset = args->condition.notifier.offset;
 
+		if (unlikely(offset > U32_MAX - sizeof(struct notification)))
+			return -EINVAL;
+
+		end = offset + sizeof(struct notification);
+
 		dmabuf = dma_buf_get(id);
 		if (IS_ERR(dmabuf)) {
 			gk20a_err(d, "invalid notifier nvmap handle 0x%lx",
 				   id);
+			return -EINVAL;
+		}
+
+		if (end > dmabuf->size || end < sizeof(struct notification)) {
+			dma_buf_put(dmabuf);
+			gk20a_err(d, "invalid notifier offset\n");
 			return -EINVAL;
 		}
 
