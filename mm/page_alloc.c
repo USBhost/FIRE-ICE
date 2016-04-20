@@ -942,7 +942,7 @@ static int fallbacks[MIGRATE_TYPES][4] = {
 	[MIGRATE_UNMOVABLE]   = { MIGRATE_RECLAIMABLE, MIGRATE_MOVABLE,     MIGRATE_RESERVE },
 	[MIGRATE_RECLAIMABLE] = { MIGRATE_UNMOVABLE,   MIGRATE_MOVABLE,     MIGRATE_RESERVE },
 #ifdef CONFIG_CMA
-	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_RESERVE },
+	[MIGRATE_MOVABLE]     = { MIGRATE_CMA,         MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE, MIGRATE_RESERVE },
 	[MIGRATE_CMA]         = { MIGRATE_RESERVE }, /* Never used */
 #else
 	[MIGRATE_MOVABLE]     = { MIGRATE_RECLAIMABLE, MIGRATE_UNMOVABLE,   MIGRATE_RESERVE },
@@ -1050,8 +1050,7 @@ static void change_pageblock_range(struct page *pageblock_page,
  * as well.
  */
 static void try_to_steal_freepages(struct zone *zone, struct page *page,
-				   int start_type, int fallback_type,
-				   int start_order)
+				  int start_type, int fallback_type)
 {
 	int current_order = page_order(page);
 
@@ -1061,14 +1060,9 @@ static void try_to_steal_freepages(struct zone *zone, struct page *page,
 		return;
 	}
 
-	/* don't let unmovable allocations cause migrations simply because of free pages */
-	if ((start_type != MIGRATE_UNMOVABLE && current_order >= pageblock_order / 2) ||
-	    /* only steal reclaimable page blocks for unmovable allocations */
-	    (start_type == MIGRATE_UNMOVABLE && fallback_type != MIGRATE_MOVABLE && current_order >= pageblock_order / 2) ||
-	    /* reclaimable can steal aggressively */
+	if (current_order >= pageblock_order / 2 ||
 	    start_type == MIGRATE_RECLAIMABLE ||
-	    // allow unmovable allocs up to 64K without migrating blocks
-	    (start_type == MIGRATE_UNMOVABLE && start_order >= 5) ||
+	    start_type == MIGRATE_UNMOVABLE ||
 	    page_group_by_mobility_disabled) {
 		int pages;
 
@@ -1126,8 +1120,8 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 
 			if (!is_migrate_cma(migratetype)) {
 				try_to_steal_freepages(zone, page,
-						       start_migratetype,
-						       migratetype, order);
+							start_migratetype,
+							migratetype);
 			} else {
 				/*
 				 * When borrowing from MIGRATE_CMA, we need to
@@ -1165,6 +1159,10 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 	return NULL;
 }
 
+#ifdef CONFIG_CMA
+unsigned long cma_get_total_pages(void);
+#endif
+
 /*
  * Do the hard work of removing an element from the buddy allocator.
  * Call me with the zone->lock already held.
@@ -1172,10 +1170,24 @@ __rmqueue_fallback(struct zone *zone, unsigned int order, int start_migratetype)
 static struct page *__rmqueue(struct zone *zone, unsigned int order,
 						int migratetype)
 {
-	struct page *page;
+	struct page *page = NULL;
 
 retry_reserve:
-	page = __rmqueue_smallest(zone, order, migratetype);
+#ifdef CONFIG_CMA
+	if (migratetype == MIGRATE_MOVABLE) {
+
+		unsigned long nr_cma_pages = cma_get_total_pages();
+		unsigned long nr_free_cma_pages =
+			global_page_state(NR_FREE_CMA_PAGES);
+		unsigned int current_cma_usage = 100 -
+			((nr_free_cma_pages * 100) / nr_cma_pages);
+
+		if (current_cma_usage < cma_threshold_get())
+			page = __rmqueue_smallest(zone, order, MIGRATE_CMA);
+	}
+	if (!page)
+#endif
+		page = __rmqueue_smallest(zone, order, migratetype);
 
 	if (unlikely(!page) && migratetype != MIGRATE_RESERVE) {
 		page = __rmqueue_fallback(zone, order, migratetype);
