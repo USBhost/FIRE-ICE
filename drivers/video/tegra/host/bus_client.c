@@ -80,6 +80,26 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	return err;
 }
 
+int validate_max_size(struct platform_device *ndev, u32 size)
+{
+	struct resource *r;
+
+	/* check if size is non-zero and u32 aligned */
+	if (!size || size & 3)
+		return -EINVAL;
+
+	r = platform_get_resource(ndev, IORESOURCE_MEM, 0);
+	if (!r) {
+		dev_err(&ndev->dev, "failed to get memory resource\n");
+		return -ENODEV;
+	}
+
+	if (size > resource_size(r))
+		return -EPERM;
+
+	return 0;
+}
+
 static __iomem void *get_aperture(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
