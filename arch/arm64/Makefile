@@ -20,7 +20,6 @@ LIBGCC 		:= $(shell $(CC) $(KBUILD_CFLAGS) -print-libgcc-file-name)
 KBUILD_DEFCONFIG := defconfig
 
 O2_FLAGS := \
-	-O3 -Wno-array-bounds \
 	-fgraphite-identity \
 	-floop-nest-optimize
 
