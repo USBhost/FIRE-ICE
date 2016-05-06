@@ -156,9 +156,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			- global_page_state(NR_SHMEM)
 			- total_swapcache_pages();
 
-	/* this is basically ~50% until killing is allowed */
+	/* basically this is ~50% until killing starts */
 	if (swap_wait == true)
 		other_free += swap_info.freeswap;
+
+	/* This will bypasses all low memory calculations if enabled, so use with care! */
+	/* Note: multiplication is not allowed here */
+	if ((swap_wait == true) && (swap_wait_percent != 00) && 
+	(swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
+		other_free += total_swap_pages;
+	}
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
@@ -233,13 +240,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			continue;
 		}
 		if (protected(p->comm)) {
-			task_unlock(p);
-			continue;
-		}
-		/* This will bypasses all low memory calculations if enabled, so use with care! */
-		/* Note: multiplication is not allowed here */
-		if ((swap_wait == true) && (swap_wait_percent != 00) && 
-		(swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
 			task_unlock(p);
 			continue;
 		}

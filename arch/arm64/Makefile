@@ -24,14 +24,16 @@ O2_FLAGS := \
 	-floop-nest-optimize
 
 O1_FLAGS := \
+	-mcpu=cortex-a57 \
+	-mtune=cortex-a57 \
 	--param l1-cache-line-size=64 \
 	--param l1-cache-size=196 \
 	--param l2-cache-size=2097
 
-KBUILD_CFLAGS	+= -fno-pic
+KBUILD_CFLAGS	+= -fno-pic -pipe
 KBUILD_CFLAGS	+= -mgeneral-regs-only
 KBUILD_CFLAGS	+= -fno-asynchronous-unwind-tables
-KBUILD_CFLAGS	+= $(O1_FLAGS) $(O2_FLAGS)
+KBUILD_CFLAGS	+= $(O2_FLAGS) $(O1_FLAGS) 
 ifeq ($(CONFIG_CPU_BIG_ENDIAN), y)
 KBUILD_CPPFLAGS	+= -mbig-endian
 AS		+= -EB
