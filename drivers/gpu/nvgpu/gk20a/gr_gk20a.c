@@ -563,30 +563,6 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	return 0;
 }
 
-/* The following is a less brittle way to call gr_gk20a_submit_fecs_method(...)
- * We should replace most, if not all, fecs method calls to this instead. */
-struct fecs_method_op_gk20a {
-	struct {
-		u32 addr;
-		u32 data;
-	} method;
-
-	struct {
-		u32 id;
-		u32 data;
-		u32 clr;
-		u32 *ret;
-		u32 ok;
-		u32 fail;
-	} mailbox;
-
-	struct {
-		u32 ok;
-		u32 fail;
-	} cond;
-
-};
-
 int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 				   struct fecs_method_op_gk20a op,
 				   bool sleepduringwait)
