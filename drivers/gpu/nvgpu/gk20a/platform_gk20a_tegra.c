@@ -26,7 +26,6 @@
 #include <mach/irqs.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
-#include <linux/platform/tegra/clock.h>
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
@@ -252,9 +251,6 @@ void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
 
 	/* store gpu bw based on soc */
 	switch (cid) {
-	case TEGRA_CHIPID_TEGRA21:
-		gpu_bw = TEGRA_GM20B_BW_PER_FREQ;
-		break;
 	case TEGRA_CHIPID_TEGRA12:
 	case TEGRA_CHIPID_TEGRA13:
 		gpu_bw = TEGRA_GK20A_BW_PER_FREQ;
