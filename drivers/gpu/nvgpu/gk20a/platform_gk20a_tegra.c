@@ -27,10 +27,6 @@
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include <linux/platform/tegra/clock.h>
-#include <linux/platform/tegra/dvfs.h>
-#include <linux/platform/tegra/common.h>
-#include <linux/clk/tegra.h>
-#include <mach/tegra_emc.h>
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
@@ -53,7 +49,6 @@ struct gk20a_platform t132_gk20a_tegra_platform;
 
 struct gk20a_emc_params {
 	long bw_ratio;
-	long freq_last_set;
 };
 
 /*
@@ -194,26 +189,19 @@ fail:
  * This function returns the minimum emc clock based on gpu frequency
  */
 
-static unsigned long gk20a_tegra_get_emc_rate(struct gk20a *g,
-				struct gk20a_emc_params *emc_params)
+static long gk20a_tegra_get_emc_rate(struct gk20a *g,
+			      struct gk20a_emc_params *emc_params, long freq)
 {
-	unsigned long gpu_freq, gpu_fmax_at_vmin;
-	unsigned long emc_rate, emc_scale;
+	long hz;
 
-	gpu_freq = clk_get_rate(g->clk.tegra_clk);
-	gpu_fmax_at_vmin = tegra_dvfs_get_fmax_at_vmin_safe_t(
-		clk_get_parent(g->clk.tegra_clk));
+	freq = HZ_TO_MHZ(freq);
 
-	/* When scaling emc, only account for the gpu load below fmax@vmin */
-	if (gpu_freq < gpu_fmax_at_vmin)
-		emc_scale = min(g->pmu.load_avg, g->emc3d_ratio);
-	else
-		emc_scale = g->emc3d_ratio;
+	hz = (freq * emc_params->bw_ratio);
+	hz = (hz * min(g->pmu.load_avg, g->emc3d_ratio)) / 1000;
 
-	emc_rate =
-		(HZ_TO_MHZ(gpu_freq) * emc_params->bw_ratio * emc_scale) / 1000;
+	hz = MHZ_TO_HZ(hz);
 
-	return MHZ_TO_HZ(emc_rate);
+	return hz;
 }
 
 /*
@@ -229,50 +217,11 @@ static void gk20a_tegra_postscale(struct platform_device *pdev,
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct gk20a_emc_params *emc_params = profile->private_data;
 	struct gk20a *g = get_gk20a(pdev);
-	struct clk *emc_clk = platform->clk[2];
-	enum tegra_chipid chip_id = tegra_get_chip_id();
-	unsigned long emc_target;
-	long emc_freq_lower, emc_freq_upper, emc_freq_rounded;
 
-	emc_target = gk20a_tegra_get_emc_rate(g, emc_params);
+	long after = clk_get_rate(g->clk.tegra_clk);
+	long emc_target = gk20a_tegra_get_emc_rate(g, emc_params, after);
 
-	switch (chip_id) {
-	case TEGRA_CHIPID_TEGRA12:
-	case TEGRA_CHIPID_TEGRA13:
-		/* T124 and T132 don't apply any rounding. The resulting
-		 * emc frequency gets implicitly rounded up after issuing
-		 * the clock_set_request.
-		 * So explicitly round up the emc target here to achieve
-		 * the same outcome. */
-		emc_freq_rounded =
-			tegra_emc_round_rate_updown(emc_target, true);
-		break;
-
-	case TEGRA_CHIPID_TEGRA21:
-		emc_freq_lower = tegra_emc_round_rate_updown(emc_target, false);
-		emc_freq_upper = tegra_emc_round_rate_updown(emc_target, true);
-
-		/* round to the nearest frequency step */
-		if (emc_target < (emc_freq_lower + emc_freq_upper) / 2)
-			emc_freq_rounded = emc_freq_lower;
-		else
-			emc_freq_rounded = emc_freq_upper;
-		break;
-
-	case TEGRA_CHIPID_UNKNOWN:
-	default:
-		/* a proper rounding function needs to be implemented
-		 * for emc in t18x */
-		emc_freq_rounded = clk_round_rate(emc_clk, emc_target);
-		break;
-	}
-
-	/* only change the emc clock if new rounded frequency is different
-	 * from previously set emc rate */
-	if (emc_freq_rounded != emc_params->freq_last_set) {
-		clk_set_rate(emc_clk, emc_freq_rounded);
-		emc_params->freq_last_set = emc_freq_rounded;
-	}
+	clk_set_rate(platform->clk[2], emc_target);
 }
 
 /*
@@ -426,7 +375,6 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 	if (!emc_params)
 		return;
 
-	emc_params->freq_last_set = -1;
 	gk20a_tegra_calibrate_emc(pdev, emc_params);
 
 	profile->private_data = emc_params;
