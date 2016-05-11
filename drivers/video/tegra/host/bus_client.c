@@ -80,6 +80,26 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	return err;
 }
 
+int validate_max_size(struct platform_device *ndev, u32 size)
+{
+	struct resource *r;
+
+	/* check if size is non-zero and u32 aligned */
+	if (!size || size & 3)
+		return -EINVAL;
+
+	r = platform_get_resource(ndev, IORESOURCE_MEM, 0);
+	if (!r) {
+		dev_err(&ndev->dev, "failed to get memory resource\n");
+		return -ENODEV;
+	}
+
+	if (size > resource_size(r))
+		return -EPERM;
+
+	return 0;
+}
+
 static __iomem void *get_aperture(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -248,10 +268,9 @@ static int __nvhost_channelopen(struct inode *inode,
 	trace_nvhost_channel_open(dev_name(&ch->dev->dev));
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv) {
-		nvhost_putchannel(ch, 1);
+	if (!priv)
 		goto fail;
-	}
+
 	filp->private_data = priv;
 	priv->ch = ch;
 	if (nvhost_module_add_client(ch->dev, priv))
@@ -281,13 +300,15 @@ static int __nvhost_channelopen(struct inode *inode,
 		priv->timeout = 0;
 	mutex_unlock(&channel_lock);
 	return 0;
+
 fail_priv:
 	nvhost_module_remove_client(ch->dev, priv);
 fail_add_client:
 	kfree(priv);
 fail:
+	nvhost_putchannel(ch, 1);
 	mutex_unlock(&channel_lock);
-	nvhost_channelrelease(inode, filp);
+
 	return -ENOMEM;
 }
 
