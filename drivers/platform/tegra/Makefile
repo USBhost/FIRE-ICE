@@ -19,34 +19,6 @@ obj-y += pm.o
 
 obj-$(CONFIG_TEGRA_MC_DOMAINS) += pm_domains.o
 
-obj-$(CONFIG_TEGRA_WAKEUP_MONITOR)      += tegra_wakeup_monitor.o
-
-# tempporarily support soctherm platform driver for T12x with include files
-# from arch/arm/tegra area.
-ifeq ($(CONFIG_TEGRA_SOCTHERM),y)
-ccflags-y += -I$(srctree)/arch/arm/mach-tegra
-obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra_soctherm.o
-endif
-
-ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE),y)
-ccflags-y += -I$(srctree)/arch/arm/mach-tegra
-obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra_throttle.o
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += tegra_throttle.o
-endif
-
-ifeq ($(CONFIG_TEGRA_CLK_FRAMEWORK),y)
-obj-y += dvfs.o
-obj-$(CONFIG_TEGRA_CLK_FRAMEWORK) += clock.o
-obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra12_clocks.o
-obj-$(CONFIG_DEBUG_FS) += clocks_stats.o
-ifeq ($(CONFIG_ARCH_TEGRA_13x_SOC),y)
-obj-y += tegra13_dvfs.o
-else
-obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra12_dvfs.o
-endif
-obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS) += tegra_cl_dvfs.o
-endif
-
 ifneq ($(CONFIG_ARM64),)
 
 ccflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
@@ -59,30 +31,16 @@ obj-y += ahb.o
 obj-y += common.o
 obj-y += devices.o
 obj-y += io.o
-
 obj-y += clock.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra12_clocks.o
 
+obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o
 
 obj-y += pm-t3.o
 obj-$(CONFIG_DEBUG_FS) += clocks_stats.o
 obj-y += tegra_core_volt_cap.o
-
-obj-$(CONFIG_TEGRA_CLK_FRAMEWORK) += tegra_clocks_pll.o
-ifeq ($(CONFIG_TEGRA_CLK_FRAMEWORK),y)
-
-# FIXME: Bug 1211919:
-# Remove CFLAGS_tegra21_clocks.o flag when tegra21_clocks.c becomes
-# stabilized.
-CFLAGS_tegra21_clocks.o = -Werror -Wno-unused-function -Wno-unused-variable
-
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC) += tegra21_clocks.o
-endif
-obj-$(CONFIG_COMMON_CLK) += common_clock.o
-
-obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o
-
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += wakeups-t12x.o
+
 
 obj-y += kfuse.o
 obj-y += apbio.o
@@ -93,17 +51,11 @@ obj-y += powergate-ops-txx.o
 obj-y += powergate-ops-t1xx.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += powergate-t12x.o
 
-obj-$(CONFIG_TEGRA_CLK_FRAMEWORK) += dvfs.o
-ifeq ($(CONFIG_TEGRA_CLK_FRAMEWORK),y)
+obj-y += dvfs.o
+obj-$(CONFIG_TEGRA_CLK_FRAMEWORK) += clock.o
+obj-$(CONFIG_ARCH_TEGRA_12x_SOC) += tegra12_clocks.o
+obj-$(CONFIG_DEBUG_FS) += clocks_stats.o
 obj-$(CONFIG_ARCH_TEGRA_13x_SOC) += tegra13_dvfs.o
-
-# FIXME: Bug 1211919:
-# Remove CFLAGS_tegra21_dvfs.o flag when tegra21_dvfs.c becomes
-# stabilized.
-CFLAGS_tegra21_dvfs.o = -Werror -Wno-unused-function -Wno-unused-variable
-
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC) += tegra21_dvfs.o
-endif
 obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra.o
 ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
 ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
@@ -133,11 +85,9 @@ obj-y += flowctrl.o
 obj-y += reset.o
 obj-$(CONFIG_DEBUG_ICEDCC) += sysfs-dcc.o
 obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster.o
+obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS) += tegra_cl_dvfs.o
+
 obj-$(CONFIG_TEGRA_PCI) += pcie.o
-obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster.o
-ifeq ($(CONFIG_TEGRA_CLK_FRAMEWORK),y)
-obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS) += tegra_cl_dvfs_link.o
-endif
 
 ifeq ($(CONFIG_TEGRA_SOCTHERM),y)
 obj-$(CONFIG_ARCH_TEGRA_13x_SOC) += tegra11_soctherm.o
@@ -161,6 +111,7 @@ obj-${CONFIG_TEGRA_ISOMGR}              += isomgr.o
 obj-$(CONFIG_TEGRA_USE_NCT)             += nct.o nct_sysfs.o
 
 obj-$(CONFIG_TEGRA_EDP_LIMITS)          += edp.o
+obj-$(CONFIG_TEGRA_GPU_EDP)             += gpu-edp.o
 
 else # --- CONFIG_ARM64 --- #
 

@@ -197,11 +197,14 @@ void tegra_get_gpu_edp_limits(const struct tegra_edp_gpu_limits **limits,
 void tegra_platform_gpu_edp_init(struct thermal_trip_info *trips,
 				int *num_trips, int margin)
 {
+	const struct tegra_edp_gpu_limits *gpu_edp_limits;
 	struct thermal_trip_info *trip_state;
-	int i;
+	int i, gpu_edp_limits_size;
 
 	if (!trips || !num_trips)
 		return;
+
+	tegra_get_gpu_edp_limits(&gpu_edp_limits, &gpu_edp_limits_size);
 
 	if (gpu_edp_limits_size > MAX_THROT_TABLE_SIZE)
 		BUG();

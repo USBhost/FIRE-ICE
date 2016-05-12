@@ -38,7 +38,7 @@
 #include "gpio-names.h"
 #include "board.h"
 #include "board-flounder.h"
-#include "dvfs.h"
+#include <linux/platform/tegra/dvfs.h>
 #include "iomap.h"
 #include "tegra-board-id.h"
 
