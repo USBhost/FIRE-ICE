@@ -186,7 +186,7 @@ static void gk20a_tegra_postscale(struct platform_device *pdev,
 	struct clk *emc_clk = platform->clk[2];
 	enum tegra_chipid chip_id = tegra_get_chip_id();
 	unsigned long emc_target;
-	long emc_freq_lower, emc_freq_upper, emc_freq_rounded;
+	long emc_freq_rounded;
 
 	emc_target = gk20a_tegra_get_emc_rate(g, emc_params);
 
@@ -200,17 +200,6 @@ static void gk20a_tegra_postscale(struct platform_device *pdev,
 		 * the same outcome. */
 		emc_freq_rounded =
 			tegra_emc_round_rate_updown(emc_target, true);
-		break;
-
-	case TEGRA_CHIPID_TEGRA21:
-		emc_freq_lower = tegra_emc_round_rate_updown(emc_target, false);
-		emc_freq_upper = tegra_emc_round_rate_updown(emc_target, true);
-
-		/* round to the nearest frequency step */
-		if (emc_target < (emc_freq_lower + emc_freq_upper) / 2)
-			emc_freq_rounded = emc_freq_lower;
-		else
-			emc_freq_rounded = emc_freq_upper;
 		break;
 
 	case TEGRA_CHIPID_UNKNOWN:
