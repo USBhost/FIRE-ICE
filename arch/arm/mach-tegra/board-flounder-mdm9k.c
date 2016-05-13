@@ -23,7 +23,7 @@
 #include <mach/pinmux.h>
 #include <linux/platform_data/qcom_usb_modem_power.h>
 
-#include "cpu-tegra.h"
+#include <linux/platform/tegra/cpu-tegra.h>
 #include "devices.h"
 #include "board.h"
 #include "board-common.h"
