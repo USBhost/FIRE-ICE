@@ -403,7 +403,7 @@ int ctrl_bridge_write(unsigned int id, char *data, size_t size)
 		goto free_data;
 	}
 
-	dev_dbg(&dev->intf->dev, "%s:[id]:%u: write (%d bytes)\n",
+	dev_dbg(&dev->intf->dev, "%s:[id]:%u: write (%zu bytes)\n",
 		__func__, id, size);
 
 	writeurb = usb_alloc_urb(0, GFP_ATOMIC);
