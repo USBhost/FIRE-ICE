@@ -282,7 +282,7 @@ int clk_enable_locked(struct clk *c)
 			ret = c->ops->enable(c);
 			trace_clock_enable(c->name, 1, 0);
 			if (ret) {
-				if (c->parent)
+				if (!(c->flags & BUS_RATE_LIMIT) && c->parent)
 					tegra_clk_disable_unprepare(c->parent);
 				return ret;
 			}
@@ -714,15 +714,8 @@ static int tegra_clk_init_one_from_table(struct tegra_clk_init_table *table)
 
 	int ret = 0;
 
-	/* Skip if clock not enabled for this platform */
-#ifdef CONFIG_TEGRA_PRE_SILICON_SUPPORT
-	if (table->platform != TEGRA_CLK_INIT_PLATFORM_ALL) {
-		if ((table->platform & tegra_clk_platform_mask()) == 0)
-			return 0;
-	}
-#endif
-
-	c = tegra_get_clock_by_name(table->name);
+	if (!c)
+		c = tegra_get_clock_by_name(table->name);
 
 	if (!c) {
 		pr_warning("Unable to initialize clock %s\n",
@@ -747,7 +740,8 @@ static int tegra_clk_init_one_from_table(struct tegra_clk_init_table *table)
 	}
 
 	if (table->parent) {
-		p = tegra_get_clock_by_name(table->parent);
+		if (!p)
+			p = tegra_get_clock_by_name(table->parent);
 		if (!p) {
 			pr_warning("Unable to find parent %s of clock %s\n",
 				table->parent, table->name);
@@ -941,7 +935,7 @@ void __init tegra_clk_preset_emc_monitor(unsigned long rate)
 void tegra_periph_clk_safe_rate_init(struct clk *c)
 {
 	int ret;
-	unsigned long rate = tegra_clk_measure_input_freq();
+	unsigned long rate = PERIPH_INIT_SAFE_RATE; //tegra_clk_measure_input_freq()
 
 	if (c->boot_rate || (clk_get_rate(c->parent) <= rate))
 		return;
