@@ -8383,7 +8383,7 @@ struct clk tegra_list_clks[] = {
 	PERIPH_CLK("extern3",	"extern3",		NULL,	122,	0x3f4,	216000000, mux_plla_clk32_pllp_clkm_plle,	MUX | DIV_U71),
 	PERIPH_CLK("i2cslow",	"i2cslow",		NULL,	81,	0x3fc,	26000000,  mux_pllp_pllc_clk32_clkm,	MUX | DIV_U71 | PERIPH_ON_APB),
 	PERIPH_CLK("pcie",	"tegra-pcie",		"pcie",	70,	0,	250000000, mux_clk_m, 			0),
-	PERIPH_CLK("afi",	"tegra-pcie",		"afi",	72,	0,	250000000, mux_clk_m, 			0),
+	PERIPH_CLK("afi",	"tegra-pcie",		"afi",	72,	0,	408000000, mux_clk_m, 			0),
 	PERIPH_CLK("se",	"se",			NULL,	127,	0x42c,	600000000, mux_pllp_pllc2_c_c3_pllm_clkm,	MUX | DIV_U71 | DIV_U71_INT | PERIPH_ON_APB),
 	PERIPH_CLK("cl_dvfs_ref", "tegra_cl_dvfs",	"ref",	155,	0x62c,	54000000,  mux_pllp_clkm,		MUX | DIV_U71 | DIV_U71_INT | PERIPH_ON_APB),
 	PERIPH_CLK("cl_dvfs_soc", "tegra_cl_dvfs",	"soc",	155,	0x630,	54000000,  mux_pllp_clkm,		MUX | DIV_U71 | DIV_U71_INT | PERIPH_ON_APB),
@@ -9330,8 +9330,8 @@ struct tegra_cpufreq_table_data *tegra_cpufreq_table_get(void)
 
 #define GRANULARITY_KHZ   25500
 #define GRANULARITY_END 1020000
-#define CPU_THROTTLE_FREQ 408000
-#define CPU_SUSPEND_FREQ  408000
+#define CPU_THROTTLE_FREQ 510000
+#define CPU_SUSPEND_FREQ  510000
 
 struct tegra_cpufreq_table_data *tegra_cpufreq_table_get(void)
 {
@@ -9355,7 +9355,7 @@ struct tegra_cpufreq_table_data *tegra_cpufreq_table_get(void)
 		return NULL;
 	}
 
-	cpu_min_freq = 204000;
+	cpu_min_freq = 510000;
 
 	cpu_clk_g->min_rate = cpu_min_freq*1000;
 
