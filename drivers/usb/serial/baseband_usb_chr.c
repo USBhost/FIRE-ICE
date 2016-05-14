@@ -90,7 +90,7 @@ static void baseband_ipc_dump(const char *prefix, unsigned long int offset,
 
 	for (i = 0; i < bufsiz; i += 16) {
 		pr_debug("%s"
-			"[%lx+%x] %p "
+			"[%lx+%zu] %p "
 			"%02x %02x %02x %02x "
 			"%02x %02x %02x %02x "
 			"%02x %02x %02x %02x "
@@ -161,7 +161,7 @@ static size_t peek_ipc_tx_bufsiz(struct baseband_ipc *ipc,
 	list_for_each_entry_safe(ipc_buf, ipc_buf_next, &ipc->tx.buf, list)
 	{
 		pr_debug("peek_ipc_tx_bufsiz - "
-			"ipc_buf %p ipc_buf->offset %x ipc_buf->count %x\n",
+			"ipc_buf %p ipc_buf->offset %zu ipc_buf->count %zu\n",
 			ipc_buf, ipc_buf->offset, ipc_buf->count);
 		if (ipc_buf->count > bufsiz - tx_bufsiz)
 			break;
@@ -203,7 +203,7 @@ static size_t get_ipc_tx_buf(struct baseband_ipc *ipc,
 	list_for_each_entry_safe(ipc_buf, ipc_buf_next, &ipc->tx.buf, list)
 	{
 		pr_debug("get_ipc_tx_buf - "
-			"ipc_buf %p ipc_buf->offset %x ipc_buf->count %x\n",
+			"ipc_buf %p ipc_buf->offset %zd ipc_buf->count %zd\n",
 			ipc_buf, ipc_buf->offset, ipc_buf->count);
 		pr_debug("get_ipc_tx_buf - "
 			"ipc_buf->data [0] %x [1] %x [2] %x [3] %x\n",
@@ -272,7 +272,7 @@ retry:
 	list_for_each_entry_safe(ipc_buf, ipc_buf_next, &ipc->rx_free.buf, list)
 	{
 		pr_debug("put_ipc_rx_buf - "
-			"ipc_buf %p ipc_buf->offset %x ipc_buf->count %x\n",
+			"ipc_buf %p ipc_buf->offset %zu ipc_buf->count %zu\n",
 			ipc_buf, ipc_buf->offset, ipc_buf->count);
 		if (sizeof(ipc_buf->data) > bufsiz - rx_bufsiz) {
 			/* partially fill rx free buffer */
@@ -349,7 +349,7 @@ retry:
 	list_for_each_entry_safe(ipc_buf, ipc_buf_next, &ipc->rx.buf, list)
 	{
 		pr_debug("baseband_ipc_file_read - "
-			"ipc_buf %p ipc_buf->offset %x ipc_buf->count %x\n",
+			"ipc_buf %p ipc_buf->offset %zu ipc_buf->count %zu\n",
 			ipc_buf, ipc_buf->offset, ipc_buf->count);
 		pr_debug("baseband_ipc_file_read - "
 			"ipc_buf->data [0] %x [1] %x [2] %x [3] %x\n",
@@ -423,7 +423,7 @@ static ssize_t baseband_ipc_file_write(struct baseband_ipc *ipc,
 
 	/* do not accept write if previous tx not finished */
 	if (peek_ipc_tx_bufsiz(ipc, USB_CHR_TX_BUFSIZ) != 0) {
-		pr_debug("%s: not accepting write of %u bytes"
+		pr_debug("%s: not accepting write of %zu bytes"
 			" - previous tx not finished\n",
 			__func__, count);
 		return 0;
@@ -442,7 +442,7 @@ retry:
 	list_for_each_entry_safe(ipc_buf, ipc_buf_next, &ipc->tx_free.buf, list)
 	{
 		pr_debug("baseband_ipc_file_write - "
-			"ipc_buf %p ipc_buf->offset %x ipc_buf->count %x\n",
+			"ipc_buf %p ipc_buf->offset %zu ipc_buf->count %zu\n",
 			ipc_buf, ipc_buf->offset, ipc_buf->count);
 		if (sizeof(ipc_buf->data) > count - write_count) {
 			/* partially fill tx free buffer */
@@ -753,9 +753,9 @@ static void baseband_usb_chr_rx_urb_comp_work(struct work_struct *work)
 			" - rx buf ", 0,
 			urb->transfer_buffer, len > 16 ? 16 : len);
 		if (len != urb->actual_length) {
-			pr_err("baseband_usb_chr_rx_urb_comp_work - "
-				"put_ipx_rx_buf() only put %d/%d bytes\n",
-				len, urb->actual_length);
+			pr_err("baseband_usb_chr_rx_urb_comp_work - ");
+			pr_err("put_ipx_rx_buf() only put %zu", len);
+			pr_err("/%d bytes\n", urb->actual_length);
 		}
 		/* increment count of available rx bytes */
 		atomic_add(len, &g_rx_count);
@@ -1148,7 +1148,7 @@ static ssize_t baseband_usb_chr_read(struct file *file, char *buf,
 	if (ret > 0) {
 		/* decrement count of available rx bytes */
 		int val = atomic_read(&g_rx_count);
-		pr_debug("baseband_usb_chr_read - read %d unread %d\n",
+		pr_debug("baseband_usb_chr_read - read %zd unread %zd\n",
 			ret, val - ret);
 		atomic_sub(ret, &g_rx_count);
 	}
