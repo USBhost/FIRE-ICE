@@ -34,6 +34,13 @@ static const unsigned max_num_devices = 32;
  */
 static const size_t max_zpage_size = PAGE_SIZE / 4 * 3;
 
+
+/* 
+ * This is for page_alloc.c 
+ * to know when zram's disksize is initialized.
+ */
+static bool zram_on;
+
 /*
  * NOTE: max_zpage_size must be less than or equal to:
  *   ZS_MAX_ALLOC_SIZE. Otherwise, zs_malloc() would
