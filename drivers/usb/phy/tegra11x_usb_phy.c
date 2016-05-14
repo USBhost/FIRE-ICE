@@ -1114,8 +1114,6 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy)
 	}
 	if (config->xcvr_hsslew_lsb)
 		val |= UTMIP_XCVR_HSSLEW_LSB(config->xcvr_hsslew_lsb);
-	pr_info("[USB] %s UTMIP_XCVR_CFG0:%lx xcvr_use_fuses:%d utmi_xcvr_setup:%lx\n"
-			, __func__, val, config->xcvr_use_fuses,phy->utmi_xcvr_setup);
 	writel(val, base + UTMIP_XCVR_CFG0);
 
 	val = readl(base + UTMIP_XCVR_CFG1);
