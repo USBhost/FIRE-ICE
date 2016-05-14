@@ -628,7 +628,7 @@ static void nvavp_set_channel_control_area(struct nvavp_info *nvavp, int channel
 
 	pr_debug("nvavp_set_channel_control_area for channel_id (%d):\
 		control->put (0x%08x) control->get (0x%08x)\n",
-		channel_id, (u32) &control->put, (u32) &control->get);
+		channel_id, (uintptr_t) &control->put, (uintptr_t) &control->get);
 
 	/* Clock gating disabled for video and enabled for audio  */
 	if (IS_VIDEO_CHANNEL_ID(channel_id))
@@ -1040,7 +1040,7 @@ static int nvavp_pushbuffer_update(struct nvavp_info *nvavp, u32 phys_addr,
 	control = channel_info->os_control;
 	pr_debug("nvavp_pushbuffer_update for channel_id (%d):\
 		control->put (0x%x) control->get (0x%x)\n",
-		channel_id, (u32) &control->put, (u32) &control->get);
+		channel_id, (uintptr_t) &control->put, (uintptr_t) &control->get);
 
 	mutex_lock(&channel_info->pushbuffer_lock);
 
@@ -1185,7 +1185,7 @@ static int nvavp_load_ucode(struct nvavp_info *nvavp)
 		}
 
 		dev_info(&nvavp->nvhost_dev->dev,
-			"read ucode firmware from '%s' (%d bytes)\n",
+			"read ucode firmware from '%s' (%zu bytes)\n",
 			fw_ucode_file, nvavp_ucode_fw->size);
 
 		ptr = (void *)nvavp_ucode_fw->data;
@@ -1258,7 +1258,7 @@ static int nvavp_load_os(struct nvavp_info *nvavp, char *fw_os_file)
 		}
 
 		dev_info(&nvavp->nvhost_dev->dev,
-			"read firmware from '%s' (%d bytes)\n",
+			"read firmware from '%s' (%zu bytes)\n",
 			fw_os_file, nvavp_os_fw->size);
 
 		ptr = (void *)nvavp_os_fw->data;
@@ -1874,7 +1874,7 @@ static int nvavp_pushbuffer_submit_compat_ioctl(struct file *filp,
 	if (ret)
 		return ret;
 
-	if (__get_user(hdr_v32.syncpt, &user_hdr->syncpt))
+	if (__get_user(hdr_v32.syncpt, (uintptr_t *)&user_hdr->syncpt))
 		return -EFAULT;
 
 	if (copy_to_user((void __user *)arg, &hdr_v32,
