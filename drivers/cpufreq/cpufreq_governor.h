@@ -126,11 +126,12 @@ static void *get_cpu_dbs_info_s(int cpu)				\
  * cdbs: common dbs
  * od_*: On-demand governor
  * cs_*: Conservative governor
+ * sa_*: sublimeactive governor
  */
 
 /* Per cpu structures */
 struct cpu_dbs_common_info {
-	int cpu;
+	unsigned int cpu;
 	u64 prev_cpu_idle;
 	u64 prev_cpu_wall;
 	u64 prev_cpu_nice;
@@ -168,7 +169,7 @@ struct cs_cpu_dbs_info_s {
 	unsigned int enable:1;
 };
 
-/* Per policy Governers sysfs tunables */
+/* Per policy Governors sysfs tunables */
 struct od_dbs_tuners {
 	unsigned int ignore_nice_load;
 	unsigned int sampling_rate;
@@ -187,13 +188,22 @@ struct cs_dbs_tuners {
 	unsigned int freq_step;
 };
 
+struct sa_dbs_tuners {
+	unsigned int sampling_rate;
+	unsigned int up_threshold;
+	unsigned int down_threshold;
+	unsigned int input_event_min_freq;
+	unsigned int input_event_duration;
+};
+
 /* Common Governer data across policies */
 struct dbs_data;
 struct common_dbs_data {
 	/* Common across governors */
 	#define GOV_ONDEMAND		0
 	#define GOV_CONSERVATIVE	1
-	int governor;
+	#define GOV_SUBLIMEACTIVE   2
+	unsigned int governor;
 	struct attribute_group *attr_group_gov_sys; /* one governor - system */
 	struct attribute_group *attr_group_gov_pol; /* one governor - policy */
 
@@ -231,6 +241,10 @@ struct od_ops {
 };
 
 struct cs_ops {
+	struct notifier_block *notifier_block;
+};
+
+struct sa_ops {
 	struct notifier_block *notifier_block;
 };
 
