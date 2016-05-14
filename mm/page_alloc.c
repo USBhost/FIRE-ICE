@@ -66,6 +66,8 @@
 #include <asm/div64.h>
 #include "internal.h"
 
+#include <../drivers/block/zram/zram_drv.h>
+
 #ifdef CONFIG_USE_PERCPU_NUMA_NODE_ID
 DEFINE_PER_CPU(int, numa_node);
 EXPORT_PER_CPU_SYMBOL(numa_node);
@@ -2410,7 +2412,7 @@ void wake_all_kswapd(unsigned int order, struct zonelist *zonelist,
 	struct zone *zone;
 
 	/* Have this condition only on tegra and when ZRAM is disabled. */
-	if (config_enabled(CONFIG_ARCH_TEGRA) && !total_swap_pages)
+	if (config_enabled(CONFIG_ARCH_TEGRA) && (zram_on == 1))
 		/* Avoid kswapd for all higher zones */
 		for_each_zone_zonelist(zone, z, zonelist, high_zoneidx)
 			if (high_zoneidx > zone_idx(zone) + 1)
