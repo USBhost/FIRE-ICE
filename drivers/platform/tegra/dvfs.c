@@ -1876,7 +1876,8 @@ void tegra_dvfs_rail_register_vmax_cdev(struct dvfs_rail *rail)
 		return;
 	}
 
-	REGISTER_TEGRA_CDEV(vmax);
+	dev = thermal_cooling_device_register(rail->vmax_cdev->cdev_type,
+		(void *)rail, &tegra_dvfs_vmax_cooling_ops);
 
 	if (IS_ERR_OR_NULL(dev) || list_empty(&dev->thermal_instances)) {
 		/* report error & set the most agressive caps */
