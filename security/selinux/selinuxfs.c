@@ -65,6 +65,7 @@ static struct dentry *bool_dir;
 static int bool_num;
 static char **bool_pending_names;
 static int *bool_pending_values;
+static bool allow = 0;
 
 /* global data for classes */
 static struct dentry *class_dir;
@@ -166,6 +167,15 @@ static ssize_t sel_write_enforce(struct file *file, const char __user *buf,
 	length = -EINVAL;
 	if (sscanf(page, "%d", &new_value) != 1)
 		goto out;
+
+	/*
+	 * This will fool android into thinking that its enforcing at boot. 
+	 * but it will allow enforcing if its set again.
+	 */
+	if (allow == 0) {
+		new_value = 0;
+		allow = 1;
+	}
 
 	if (new_value != selinux_enforcing) {
 		length = task_has_security(current, SECURITY__SETENFORCE);
