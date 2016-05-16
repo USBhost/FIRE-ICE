@@ -477,6 +477,12 @@ int tegra_update_cpu_edp_limits(void)
 
 #ifdef CONFIG_DEBUG_FS
 
+static int reg_mode_force_normal_get(void *data, u64 *val)
+{
+	*val = (u64)reg_mode_force_normal;
+	return 0;
+}
+
 static int reg_mode_force_normal_set(void *data, u64 val)
 {
 	return tegra_cpu_reg_mode_force_normal(val);
