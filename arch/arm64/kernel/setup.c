@@ -529,6 +529,9 @@ static void denver_show(struct seq_file *m)
 {
 	u32 aidr;
 
+	seq_printf(m, "Processor\t: %s rev %d (%s)\n",
+		   cpu_name, read_cpuid_id() & 15, ELF_PLATFORM);
+	seq_printf(m, "Hardware\t: %s\n", machine_name);
 	asm volatile("mrs %0, AIDR_EL1" : "=r" (aidr) : );
 	seq_printf(m, "MTS version\t: %u\n", aidr);
 }
