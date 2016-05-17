@@ -465,9 +465,9 @@ static int __init denver_pmic_init(void)
 		pr_err("%s: invalid lock setting [0|1]: read %d\n", __func__, lock);
 		goto done;
 	}
-
-    if (fuse_cp_rev_check() >= 1)
+	if (fuse_cp_rev_check() >= 1) {
         voltage = 16;
+	}
 
 	err = denver_set_pmic_config(type, (u16)voltage, lock);
 
