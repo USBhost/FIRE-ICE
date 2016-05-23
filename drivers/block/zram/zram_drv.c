@@ -800,6 +800,7 @@ static void zram_reset_device(struct zram *zram)
 	memset(&zram->stats, 0, sizeof(zram->stats));
 	zram->disksize = 0;
 	zram->max_comp_streams = 2;
+	zram_on = 0; /* zram was reseted */
 
 	set_capacity(zram->disk, 0);
 	part_stat_set_all(&zram->disk->part0, 0);
@@ -848,6 +849,9 @@ static ssize_t disksize_store(struct device *dev,
 	zram->meta = meta;
 	zram->comp = comp;
 	zram->disksize = disksize;
+	zram_on = 1; /* disksize was initialized */
+	if (zram_on == 1)
+		pr_info("zram disk size is now set\n");
 	set_capacity(zram->disk, zram->disksize >> SECTOR_SHIFT);
 	up_write(&zram->init_lock);
 
@@ -1185,6 +1189,7 @@ static int create_device(struct zram *zram, int device_id)
 	strlcpy(zram->compressor, default_compressor, sizeof(zram->compressor));
 	zram->meta = NULL;
 	zram->max_comp_streams = 2;
+	zram_on = 0; /* zram is not being used atm */
 	return 0;
 
 out_free_disk:

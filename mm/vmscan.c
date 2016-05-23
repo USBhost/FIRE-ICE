@@ -326,18 +326,35 @@ unsigned long shrink_slab(struct shrink_control *shrink,
 					nr_pages_scanned, lru_pages,
 					max_pass, delta, total_scan);
 
-		while (total_scan >= batch_size) {
+		/*
+		 * Normally, we should not scan less than batch_size objects in one
+		 * pass to avoid too frequent shrinker calls, but if the slab has less
+		 * than batch_size objects in total and we are really tight on memory,
+		 * we will try to reclaim all available objects, otherwise we can end
+		 * up failing allocations although there are plenty of reclaimable
+		 * objects spread over several slabs with usage less than the
+		 * batch_size.
+		 *
+		 * We detect the "tight on memory" situations by looking at the total
+		 * number of objects we want to scan (total_scan). If it is greater
+		 * than the total number of objects on slab (max_pass), we must be
+		 * scanning at high prio and therefore should try to reclaim as much as
+		 * possible.
+		 */
+		while (total_scan >= batch_size ||
+		       total_scan >= max_pass) {
 			int nr_before;
+			unsigned long nr_to_scan = min(batch_size, total_scan);
 
 			nr_before = do_shrinker_shrink(shrinker, shrink, 0);
 			shrink_ret = do_shrinker_shrink(shrinker, shrink,
-							batch_size);
+							nr_to_scan);
 			if (shrink_ret == -1)
 				break;
 			if (shrink_ret < nr_before)
 				ret += nr_before - shrink_ret;
-			count_vm_events(SLABS_SCANNED, batch_size);
-			total_scan -= batch_size;
+			count_vm_events(SLABS_SCANNED, nr_to_scan);
+			total_scan -= nr_to_scan;
 
 			cond_resched();
 		}
@@ -1702,6 +1719,8 @@ static void get_scan_count(struct lruvec *lruvec, struct scan_control *sc,
 	bool force_scan = false;
 	unsigned long ap, fp;
 	enum lru_list lru;
+	bool some_scanned;
+	int pass;
 
 	/*
 	 * If the zone or memcg is small, nr[l] can be 0.  This
@@ -1821,39 +1840,49 @@ static void get_scan_count(struct lruvec *lruvec, struct scan_control *sc,
 	fraction[1] = fp;
 	denominator = ap + fp + 1;
 out:
-	for_each_evictable_lru(lru) {
-		int file = is_file_lru(lru);
-		unsigned long size;
-		unsigned long scan;
+	some_scanned = false;
+	/* Only use force_scan on second pass. */
+	for (pass = 0; !some_scanned && pass < 2; pass++) {
+		for_each_evictable_lru(lru) {
+			int file = is_file_lru(lru);
+			unsigned long size;
+			unsigned long scan;
 
-		size = get_lru_size(lruvec, lru);
-		scan = size >> sc->priority;
+			size = get_lru_size(lruvec, lru);
+			scan = size >> sc->priority;
 
-		if (!scan && force_scan)
-			scan = min(size, SWAP_CLUSTER_MAX);
+			if (!scan && pass && force_scan)
+				scan = min(size, SWAP_CLUSTER_MAX);
 
-		switch (scan_balance) {
-		case SCAN_EQUAL:
-			/* Scan lists relative to size */
-			break;
-		case SCAN_FRACT:
+			switch (scan_balance) {
+			case SCAN_EQUAL:
+				/* Scan lists relative to size */
+				break;
+			case SCAN_FRACT:
+				/*
+				 * Scan types proportional to swappiness and
+				 * their relative recent reclaim efficiency.
+				 */
+				scan = div64_u64(scan * fraction[file],
+							denominator);
+				break;
+			case SCAN_FILE:
+			case SCAN_ANON:
+				/* Scan one type exclusively */
+				if ((scan_balance == SCAN_FILE) != file)
+					scan = 0;
+				break;
+			default:
+				/* Look ma, no brain */
+				BUG();
+			}
+			nr[lru] = scan;
 			/*
-			 * Scan types proportional to swappiness and
-			 * their relative recent reclaim efficiency.
+			 * Skip the second pass and don't force_scan,
+			 * if we found something to scan.
 			 */
-			scan = div64_u64(scan * fraction[file], denominator);
-			break;
-		case SCAN_FILE:
-		case SCAN_ANON:
-			/* Scan one type exclusively */
-			if ((scan_balance == SCAN_FILE) != file)
-				scan = 0;
-			break;
-		default:
-			/* Look ma, no brain */
-			BUG();
+			some_scanned |= !!scan;
 		}
-		nr[lru] = scan;
 	}
 }
 
