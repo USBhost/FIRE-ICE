@@ -409,14 +409,14 @@ int tfa9895l_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 #endif
 
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 3; i++) {
 		tfa9895_i2c_write(cf_dspl_bypass[i], 3);
 		/* Enable NXP PVP Bit10 of Reg 8 per acoustic's request in bypass mode.(Hboot loopback & MFG ROM) */
 		tfa9895_i2c_write(SPK_CR, 1);
 		tfa9895_i2c_read(SPK_CR + 1, 2);
 		SPK_CR[1] |= 0x4; /* Enable PVP bit10 */
 		tfa9895_i2c_write(SPK_CR, 3);
-
+	}
 	return 0;
 
 err_free_gpio_all:
