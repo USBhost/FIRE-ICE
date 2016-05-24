@@ -267,7 +267,6 @@ static void _get_trip_info(int *temps, int n_temps,
 			   struct thermal_trip_info *trips,
 			   int *num_trips, int margin)
 {
-	const struct tegra_edp_gpu_limits *gpu_edp_limits;
 	struct thermal_trip_info *trip_state;
 	int i;
 
