@@ -714,8 +714,7 @@ static int tegra_clk_init_one_from_table(struct tegra_clk_init_table *table)
 
 	int ret = 0;
 
-	if (!c)
-		c = tegra_get_clock_by_name(table->name);
+	c = tegra_get_clock_by_name(table->name);
 
 	if (!c) {
 		pr_warning("Unable to initialize clock %s\n",
@@ -740,8 +739,7 @@ static int tegra_clk_init_one_from_table(struct tegra_clk_init_table *table)
 	}
 
 	if (table->parent) {
-		if (!p)
-			p = tegra_get_clock_by_name(table->parent);
+		p = tegra_get_clock_by_name(table->parent);
 		if (!p) {
 			pr_warning("Unable to find parent %s of clock %s\n",
 				table->parent, table->name);
