@@ -1290,13 +1290,13 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 
 			sysfs_remove_group(get_governor_parent_kobj(policy),
 					get_sysfs_attr());
+			common_tunables = NULL;
 			if (tunables->above_hispeed_delay !=
 				default_above_hispeed_delay)
 				kfree(tunables->above_hispeed_delay);
 			if (tunables->target_loads != default_target_loads)
 				kfree(tunables->target_loads);
 			kfree(tunables);
-			common_tunables = NULL;
 		}
 
 		policy->governor_data = NULL;
