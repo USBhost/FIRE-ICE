@@ -854,8 +854,9 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 
 	/*
 	 * SD cards use a 100 multiplier rather than 10
+	 * Very poor emmc cards will use a higher value
 	 */
-	mult = mmc_card_sd(card) ? 100 : 10;
+	mult = mmc_card_sd(card) ? 100 : 20;
 
 	/*
 	 * Scale up the multiplier (and therefore the timeout) by
