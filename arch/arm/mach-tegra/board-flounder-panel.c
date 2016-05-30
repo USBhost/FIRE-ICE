@@ -406,9 +406,9 @@ static struct tegra_panel *flounder_panel_configure(struct board_info *board_out
 	panel = &dsi_j_qxga_8_9;
 	dsi_instance = DSI_INSTANCE_0;
 	/*tegra_io_dpd_enable(&dsic_io);
-	tegra_io_dpd_enable(&dsid_io);*/
+	tegra_io_dpd_enable(&dsid_io);
 	if (board_out->board_id == BOARD_E1813)
-		panel = &dsi_s_wqxga_10_1;
+		panel = &dsi_s_wqxga_10_1;*/
 	if (dsi_instance_out)
 		*dsi_instance_out = dsi_instance;
 	return panel;
