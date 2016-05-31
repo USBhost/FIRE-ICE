@@ -544,7 +544,7 @@ static struct actmon_dev actmon_dev_emc = {
 	 defined(CONFIG_ARCH_TEGRA_12x_SOC) || \
 	 defined(CONFIG_ARCH_TEGRA_13x_SOC))
 	.boost_up_threshold	= 70,
-	.boost_down_threshold	= 50,
+	.boost_down_threshold	= 45,
 #else
 	.boost_up_threshold	= 60,
 	.boost_down_threshold	= 40,
