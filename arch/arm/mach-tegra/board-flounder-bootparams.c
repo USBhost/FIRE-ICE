@@ -98,7 +98,7 @@ static int get_modem_sku(void)
 }
 
 static unsigned int radio_image_status = 0;
-static unsigned int __init set_radio_image_status(char *read_mdm_version)
+int __init set_radio_image_status(char *read_mdm_version)
 {
 	/* TODO: Try to read baseband version */
 	if (strlen(read_mdm_version)) {
