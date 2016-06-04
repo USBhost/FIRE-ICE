@@ -160,13 +160,13 @@ fail:
 	return err;
 }
 
-static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
+/*static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 				struct tegra_panel_ops *p_ops)
 {
 	BUG_ON(!dc_out);
 
 	if (!p_ops) {
-		/* TODO: register default ops */
+		* TODO: register default ops *
 	}
 
 	dc_out->enable = p_ops->enable;
@@ -176,7 +176,7 @@ static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 	dc_out->hotplug_init = p_ops->hotplug_init;
 	dc_out->postsuspend = p_ops->postsuspend;
 	dc_out->hotplug_report = p_ops->hotplug_report;
-}
+}*/
 
 struct device_node *tegra_panel_get_dt_node(
 			struct tegra_dc_platform_data *pdata)
