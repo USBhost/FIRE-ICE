@@ -1263,9 +1263,9 @@ static bool rt5677_readable_register(struct device *dev, unsigned int reg)
 	}
 }
 
-static const DECLARE_TLV_DB_SCALE(out_vol_tlv, -4650, 150, 0);
+/*static const DECLARE_TLV_DB_SCALE(out_vol_tlv, -4650, 150, 0);*/
 static const DECLARE_TLV_DB_SCALE(dac_vol_tlv, -65625, 375, 0);
-static const DECLARE_TLV_DB_SCALE(in_vol_tlv, -3450, 150, 0);
+/*static const DECLARE_TLV_DB_SCALE(in_vol_tlv, -3450, 150, 0);*/
 static const DECLARE_TLV_DB_SCALE(adc_vol_tlv, -17625, 375, 0);
 static const DECLARE_TLV_DB_SCALE(adc_bst_tlv, 0, 1200, 0);
 
