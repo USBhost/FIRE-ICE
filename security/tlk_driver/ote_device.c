@@ -435,7 +435,7 @@ static long te_handle_trustedapp_ioctl(struct file *file,
 	switch (ioctl_num) {
 	case TE_IOCTL_OPEN_CLIENT_SESSION:
 		operation = &cmd.opensession.operation;
-		ptr_user_answer = (void *)cmd.opensession.answer;
+		ptr_user_answer = (void *)(uintptr_t)cmd.opensession.answer;
 
 		cmd_desc = te_get_free_cmd_desc(dev);
 		params = te_get_free_params(dev, operation->list_count);
@@ -467,7 +467,7 @@ static long te_handle_trustedapp_ioctl(struct file *file,
 		break;
 
 	case TE_IOCTL_CLOSE_CLIENT_SESSION:
-		ptr_user_answer = (void *)cmd.closesession.answer;
+		ptr_user_answer = (void *)(uintptr_t)cmd.closesession.answer;
 		cmd_desc = te_get_free_cmd_desc(dev);
 		if (!cmd_desc) {
 			SET_ANSWER(answer,
@@ -486,7 +486,7 @@ static long te_handle_trustedapp_ioctl(struct file *file,
 
 	case TE_IOCTL_LAUNCH_OPERATION:
 		operation = &cmd.launchop.operation;
-		ptr_user_answer = (void *)cmd.launchop.answer;
+		ptr_user_answer = (void *)(uintptr_t)cmd.launchop.answer;
 
 		cmd_desc = te_get_free_cmd_desc(dev);
 		params = te_get_free_params(dev, operation->list_count);
