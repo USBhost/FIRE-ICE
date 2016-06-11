@@ -148,7 +148,7 @@ int battery_voltage_monitor_on_once(unsigned int voltage)
 {
 	return __voltage_monitor_on_once(true, voltage);
 }
-EXPORT_SYMBOL_GPL(battery_voltage_monitor_on);
+EXPORT_SYMBOL_GPL(battery_voltage_monitor_on_once);
 
 int battery_voltage_monitor_off(void)
 {
@@ -180,7 +180,7 @@ int system_voltage_monitor_on_once(unsigned int voltage)
 {
 	return __voltage_monitor_on_once(false, voltage);
 }
-EXPORT_SYMBOL_GPL(system_voltage_monitor_on);
+EXPORT_SYMBOL_GPL(system_voltage_monitor_on_once);
 
 int system_voltage_monitor_off(void)
 {
