@@ -1063,7 +1063,7 @@ long diagchar_ioctl(struct file *filp, unsigned int iocmd, unsigned long ioarg)
 	return result;
 }
 
-static int diagchar_read(struct file *file, char __user * buf, size_t count, loff_t * ppos)
+static ssize_t diagchar_read(struct file *file, char __user * buf, size_t count, loff_t * ppos)
 {
 	struct diag_dci_client_tbl *entry;
 	int index = -1, i = 0, ret = 0, timeout = 0;
@@ -1444,7 +1444,7 @@ exit:
 	return ret;
 }
 
-static int diagchar_write(struct file *file, const char __user * buf, size_t count, loff_t * ppos)
+static ssize_t diagchar_write(struct file *file, const char __user * buf, size_t count, loff_t * ppos)
 {
 	int err, ret = 0, pkt_type, token_offset = 0;
 	int remote_proc = 0;
@@ -1903,7 +1903,10 @@ static int diagchar_write(struct file *file, const char __user * buf, size_t cou
 		diag_hdlc_encode(&send, &enc);
 	}
 
-	driver->used = (uintptr_t) enc.dest - (uintptr_t) buf_hdlc;
+	driver->used = ((uintptr_t)enc.dest - (uintptr_t)buf_hdlc <
+						HDLC_OUT_BUF_SIZE) ?
+			((uintptr_t)enc.dest - (uintptr_t)buf_hdlc) :
+						HDLC_OUT_BUF_SIZE;
 	if (pkt_type == DATA_TYPE_RESPONSE) {
 		err = diag_device_write(buf_hdlc, APPS_DATA, NULL);
 		if (err) {
