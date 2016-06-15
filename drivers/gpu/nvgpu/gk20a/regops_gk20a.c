@@ -551,8 +551,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 
 	if (op->type == REGOP(TYPE_GLOBAL)) {
 		/* search global list */
-		valid = g->ops.regops.get_global_whitelist_ranges &&
-			!!bsearch(&offset,
+		valid = !!bsearch(&offset,
 			g->ops.regops.get_global_whitelist_ranges(),
 			g->ops.regops.get_global_whitelist_ranges_count(),
 			sizeof(*g->ops.regops.get_global_whitelist_ranges()),
@@ -561,8 +560,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 		/* if debug session and channel is bound search context list */
 		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
 			/* binary search context list */
-			valid = g->ops.regops.get_context_whitelist_ranges &&
-				!!bsearch(&offset,
+			valid = !!bsearch(&offset,
 			g->ops.regops.get_context_whitelist_ranges(),
 			g->ops.regops.get_context_whitelist_ranges_count(),
 			sizeof(*g->ops.regops.get_context_whitelist_ranges()),
@@ -571,8 +569,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 
 		/* if debug session and channel is bound search runcontrol list */
 		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
-			valid = g->ops.regops.get_runcontrol_whitelist &&
-				linear_search(offset,
+			valid = linear_search(offset,
 				g->ops.regops.get_runcontrol_whitelist(),
 				g->ops.regops.get_runcontrol_whitelist_count());
 		}
@@ -585,8 +582,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 		}
 
 		/* binary search context list */
-		valid = g->ops.regops.get_context_whitelist_ranges &&
-			!!bsearch(&offset,
+		valid = !!bsearch(&offset,
 			g->ops.regops.get_context_whitelist_ranges(),
 			g->ops.regops.get_context_whitelist_ranges_count(),
 			sizeof(*g->ops.regops.get_context_whitelist_ranges()),
@@ -594,15 +590,13 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 
 		/* if debug session and channel is bound search runcontrol list */
 		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
-			valid = g->ops.regops.get_runcontrol_whitelist &&
-				linear_search(offset,
+			valid = linear_search(offset,
 				g->ops.regops.get_runcontrol_whitelist(),
 				g->ops.regops.get_runcontrol_whitelist_count());
 		}
 
 	} else if (op->type == REGOP(TYPE_GR_CTX_QUAD)) {
-		valid = g->ops.regops.get_qctl_whitelist &&
-			linear_search(offset,
+		valid = linear_search(offset,
 				g->ops.regops.get_qctl_whitelist(),
 				g->ops.regops.get_qctl_whitelist_count());
 	}
