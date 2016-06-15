@@ -496,7 +496,7 @@ int diag_copy_remote(char __user * buf, size_t count, int *pret, int *pnum_data)
 
 		for (i = 0; i < diag_hsic[index].poolsize_hsic_write; i++) {
 			if (hsic_buf_tbl[i].length > 0) {
-				pr_debug("diag: HSIC copy to user, i: %d, buf: %x, len: %d\n", i, (unsigned int)hsic_buf_tbl[i].buf, hsic_buf_tbl[i].length);
+				pr_debug("diag: HSIC copy to user, i: %d, buf: %p, len: %d\n", i, hsic_buf_tbl[i].buf, hsic_buf_tbl[i].length);
 				num_data++;
 #if 0
 				/* Copy the negative token */
@@ -1104,7 +1104,7 @@ static int diagchar_read(struct file *file, char __user * buf, size_t count, lof
 		for (i = 0; i < driver->buf_tbl_size; i++) {
 			if (driver->buf_tbl[i].length > 0) {
 #ifdef DIAG_DEBUG
-				pr_debug("diag: WRITING the buf address " "and length is %x , %d\n", (unsigned int)
+				pr_debug("diag: WRITING the buf address and length is %p , %d\n",
 					 (driver->buf_tbl[i].buf), driver->buf_tbl[i].length);
 #endif
 				num_data++;
@@ -1124,7 +1124,7 @@ static int diagchar_read(struct file *file, char __user * buf, size_t count, lof
 				ret += driver->buf_tbl[i].length;
 drop:
 #ifdef DIAG_DEBUG
-				pr_debug("diag: DEQUEUE buf address and" " length is %x,%d\n", (unsigned int)
+				pr_debug("diag: DEQUEUE buf address and length is %x,%d\n",
 					 (driver->buf_tbl[i].buf), driver->buf_tbl[i].length);
 #endif
 				diagmem_free(driver, (unsigned char *)
@@ -1885,7 +1885,7 @@ static int diagchar_write(struct file *file, const char __user * buf, size_t cou
 	/* This is to check if after HDLC encoding, we are still within the
 	   limits of aggregation buffer. If not, we write out the current buffer
 	   and start aggregation in a newly allocated buffer */
-	if ((unsigned int)enc.dest >= (unsigned int)(buf_hdlc + HDLC_OUT_BUF_SIZE)) {
+	if ((uintptr_t)enc.dest >= (uintptr_t)(buf_hdlc + HDLC_OUT_BUF_SIZE)) {
 		err = diag_device_write(buf_hdlc, APPS_DATA, NULL);
 		if (err) {
 			ret = -EIO;
@@ -1903,7 +1903,7 @@ static int diagchar_write(struct file *file, const char __user * buf, size_t cou
 		diag_hdlc_encode(&send, &enc);
 	}
 
-	driver->used = (uint32_t) enc.dest - (uint32_t) buf_hdlc;
+	driver->used = (uintptr_t) enc.dest - (uintptr_t) buf_hdlc;
 	if (pkt_type == DATA_TYPE_RESPONSE) {
 		err = diag_device_write(buf_hdlc, APPS_DATA, NULL);
 		if (err) {
