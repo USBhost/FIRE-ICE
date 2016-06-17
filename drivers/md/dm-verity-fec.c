@@ -544,6 +544,7 @@ void verity_fec_init_io(struct dm_verity_io *io)
 	memset(fio->bufs, 0, sizeof(fio->bufs));
 	fio->nbufs = 0;
 	fio->output = NULL;
+	fio->level = 0;
 }
 
 /*
@@ -703,7 +704,8 @@ static struct attribute *fec_attrs[] = {
 
 static struct kobj_type fec_ktype = {
 	.sysfs_ops = &kobj_sysfs_ops,
-	.default_attrs = fec_attrs
+	.default_attrs = fec_attrs,
+	.release = dm_kobject_release
 };
 
 /*
