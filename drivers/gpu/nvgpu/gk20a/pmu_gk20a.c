@@ -44,8 +44,6 @@ static void pmu_setup_hw(struct work_struct *work);
 static void ap_callback_init_and_enable_ctrl(
 		struct gk20a *g, struct pmu_msg *msg,
 		void *param, u32 seq_desc, u32 status);
-static int gk20a_pmu_ap_send_command(struct gk20a *g,
-			union pmu_ap_cmd *p_ap_cmd, bool b_block);
 
 static int pmu_init_powergating(struct gk20a *g);
 
@@ -1598,8 +1596,6 @@ int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	INIT_WORK(&pmu->pg_init, pmu_setup_hw);
 
-	gk20a_init_pmu_vm(mm);
-
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 	pmu->ucode.cpuva = dma_alloc_attrs(d, GK20A_PMU_UCODE_SIZE_MAX,
 					&iova,
@@ -1798,9 +1794,6 @@ int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 	return 0;
 
 }
-
-static int gk20a_aelpg_init(struct gk20a *g);
-static int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 
 static void pmu_setup_hw_load_zbc(struct gk20a *g);
 static void pmu_setup_hw_enable_elpg(struct gk20a *g);
@@ -3324,16 +3317,23 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 {
+	*load = g->pmu.load_shadow;
+	return 0;
+}
+
+int gk20a_pmu_load_update(struct gk20a *g)
+{
 	struct pmu_gk20a *pmu = &g->pmu;
 	u16 _load = 0;
 
 	if (!pmu->perfmon_ready) {
-		*load = 0;
+		pmu->load_shadow = 0;
 		return 0;
 	}
 
 	pmu_copy_from_dmem(pmu, pmu->sample_buffer, (u8 *)&_load, 2, 0);
-	*load = _load / 10;
+	pmu->load_shadow = _load / 10;
+	pmu->load_avg = (((9*pmu->load_avg) + pmu->load_shadow) / 10);
 
 	return 0;
 }
@@ -3394,7 +3394,7 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 }
 
 /* Send an Adaptive Power (AP) related command to PMU */
-static int gk20a_pmu_ap_send_command(struct gk20a *g,
+int gk20a_pmu_ap_send_command(struct gk20a *g,
 			union pmu_ap_cmd *p_ap_cmd, bool b_block)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -3498,7 +3498,7 @@ static void ap_callback_init_and_enable_ctrl(
 	}
 }
 
-static int gk20a_aelpg_init(struct gk20a *g)
+int gk20a_aelpg_init(struct gk20a *g)
 {
 	int status = 0;
 
@@ -3507,30 +3507,28 @@ static int gk20a_aelpg_init(struct gk20a *g)
 
 	/* TODO: Check for elpg being ready? */
 	ap_cmd.init.cmd_id = PMU_AP_CMD_ID_INIT;
-	ap_cmd.init.pg_sampling_period_us =
-		APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;
+	ap_cmd.init.pg_sampling_period_us = g->pmu.aelpg_param[0];
 
 	status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
 	return status;
 }
 
-static int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
+int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
 {
 	int status = 0;
 	union pmu_ap_cmd ap_cmd;
 
 	/* TODO: Probably check if ELPG is ready? */
-
 	ap_cmd.init_and_enable_ctrl.cmd_id = PMU_AP_CMD_ID_INIT_AND_ENABLE_CTRL;
 	ap_cmd.init_and_enable_ctrl.ctrl_id = ctrl_id;
 	ap_cmd.init_and_enable_ctrl.params.min_idle_filter_us =
-		APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US;
+			g->pmu.aelpg_param[1];
 	ap_cmd.init_and_enable_ctrl.params.min_target_saving_us =
-		APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
+			g->pmu.aelpg_param[2];
 	ap_cmd.init_and_enable_ctrl.params.power_break_even_us =
-		APCTRL_POWER_BREAKEVEN_DEFAULT_US;
+			g->pmu.aelpg_param[3];
 	ap_cmd.init_and_enable_ctrl.params.cycles_per_sample_max =
-		APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
+			g->pmu.aelpg_param[4];
 
 	switch (ctrl_id) {
 	case PMU_AP_CTRL_ID_GRAPHICS:

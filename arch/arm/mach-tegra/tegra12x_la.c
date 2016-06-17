@@ -17,10 +17,11 @@
 #include <linux/types.h>
 #include <linux/clk.h>
 #include <asm/io.h>
+#include <asm/div64.h>
 #include <mach/latency_allowance.h>
 #include <mach/tegra_emc.h>
 #include "la_priv.h"
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "iomap.h"
 
 
@@ -210,7 +211,7 @@
 /* Misc macros */
 #define T12X_LA_FP_FACTOR					1000
 #define T12X_LA_REAL_TO_FP(val)			((val) * T12X_LA_FP_FACTOR)
-#define T12X_LA_FP_TO_REAL(val)			((val) / T12X_LA_FP_FACTOR)
+#define T12X_LA_FP_TO_REAL(val)			do_div((val), T12X_LA_FP_FACTOR)
 #define T12X_LA_ADDITIONAL_FP_FACTOR				10
 #define T12X_LA_FP_TO_FPA(val)		((val) * T12X_LA_ADDITIONAL_FP_FACTOR)
 #define T12X_LA_FPA_TO_FP(val)		((val) / T12X_LA_ADDITIONAL_FP_FACTOR)
@@ -1056,7 +1057,7 @@ static void program_scaled_la(struct la_client_info *ci, int la)
 			T12X_MC_SCALED_LA_DISPLAY0A_0_HIGH_MASK);
 		writel(reg_write, T12X_MC_SCALED_LA_DISPLAY0A_0);
 		la_debug("reg_addr=0x%x, write=0x%x",
-		(u32)T12X_MC_SCALED_LA_DISPLAY0A_0, (u32)reg_write);
+		(u32)(uintptr_t)T12X_MC_SCALED_LA_DISPLAY0A_0, (u32)reg_write);
 	} else if (ci->id == ID(DISPLAY_0AB)) {
 		reg_write = ((la << T12X_MC_SCALED_LA_DISPLAY0AB_0_LOW_SHIFT) &
 			T12X_MC_SCALED_LA_DISPLAY0AB_0_LOW_MASK) |
@@ -1064,7 +1065,7 @@ static void program_scaled_la(struct la_client_info *ci, int la)
 			T12X_MC_SCALED_LA_DISPLAY0AB_0_HIGH_MASK);
 		writel(reg_write, T12X_MC_SCALED_LA_DISPLAY0AB_0);
 		la_debug("reg_addr=0x%x, write=0x%x",
-		(u32)T12X_MC_SCALED_LA_DISPLAY0AB_0, (u32)reg_write);
+		(u32)(uintptr_t)T12X_MC_SCALED_LA_DISPLAY0AB_0, (u32)reg_write);
 	} else if (ci->id == ID(DISPLAY_0B)) {
 		reg_write = ((la << T12X_MC_SCALED_LA_DISPLAY0B_0_LOW_SHIFT) &
 			T12X_MC_SCALED_LA_DISPLAY0B_0_LOW_MASK) |
@@ -1072,7 +1073,7 @@ static void program_scaled_la(struct la_client_info *ci, int la)
 			T12X_MC_SCALED_LA_DISPLAY0B_0_HIGH_MASK);
 		writel(reg_write, T12X_MC_SCALED_LA_DISPLAY0B_0);
 		la_debug("reg_addr=0x%x, write=0x%x",
-		(u32)T12X_MC_SCALED_LA_DISPLAY0B_0, (u32)reg_write);
+		(u32)(uintptr_t)T12X_MC_SCALED_LA_DISPLAY0B_0, (u32)reg_write);
 	} else if (ci->id == ID(DISPLAY_0BB)) {
 		reg_write = ((la << T12X_MC_SCALED_LA_DISPLAY0BB_0_LOW_SHIFT) &
 			T12X_MC_SCALED_LA_DISPLAY0BB_0_LOW_MASK) |
@@ -1080,7 +1081,7 @@ static void program_scaled_la(struct la_client_info *ci, int la)
 			T12X_MC_SCALED_LA_DISPLAY0BB_0_HIGH_MASK);
 		writel(reg_write, T12X_MC_SCALED_LA_DISPLAY0BB_0);
 		la_debug("reg_addr=0x%x, write=0x%x",
-		(u32)T12X_MC_SCALED_LA_DISPLAY0BB_0, (u32)reg_write);
+		(u32)(uintptr_t)T12X_MC_SCALED_LA_DISPLAY0BB_0, (u32)reg_write);
 	} else if (ci->id == ID(DISPLAY_0C)) {
 		reg_write = ((la << T12X_MC_SCALED_LA_DISPLAY0C_0_LOW_SHIFT) &
 			T12X_MC_SCALED_LA_DISPLAY0C_0_LOW_MASK) |
@@ -1088,7 +1089,7 @@ static void program_scaled_la(struct la_client_info *ci, int la)
 			T12X_MC_SCALED_LA_DISPLAY0C_0_HIGH_MASK);
 		writel(reg_write, T12X_MC_SCALED_LA_DISPLAY0C_0);
 		la_debug("reg_addr=0x%x, write=0x%x",
-		(u32)T12X_MC_SCALED_LA_DISPLAY0C_0, (u32)reg_write);
+		(u32)(uintptr_t)T12X_MC_SCALED_LA_DISPLAY0C_0, (u32)reg_write);
 	} else if (ci->id == ID(DISPLAY_0CB)) {
 		reg_write = ((la << T12X_MC_SCALED_LA_DISPLAY0CB_0_LOW_SHIFT) &
 			T12X_MC_SCALED_LA_DISPLAY0CB_0_LOW_MASK) |
@@ -1096,7 +1097,7 @@ static void program_scaled_la(struct la_client_info *ci, int la)
 			T12X_MC_SCALED_LA_DISPLAY0CB_0_HIGH_MASK);
 		writel(reg_write, T12X_MC_SCALED_LA_DISPLAY0CB_0);
 		la_debug("reg_addr=0x%x, write=0x%x",
-		(u32)T12X_MC_SCALED_LA_DISPLAY0CB_0, (u32)reg_write);
+		(u32)(uintptr_t)T12X_MC_SCALED_LA_DISPLAY0CB_0, (u32)reg_write);
 	}
 }
 static void program_la(struct la_client_info *ci, int la)
@@ -1113,7 +1114,7 @@ static void program_la(struct la_client_info *ci, int la)
 	writel(reg_write, ci->reg_addr);
 	ci->la_set = la;
 	la_debug("reg_addr=0x%x, read=0x%x, write=0x%x",
-		(u32)ci->reg_addr, (u32)reg_read, (u32)reg_write);
+		(u32)(uintptr_t)ci->reg_addr, (u32)reg_read, (u32)reg_write);
 
 	program_scaled_la(ci, la);
 
@@ -1191,15 +1192,15 @@ static int t12x_set_disp_la(enum tegra_la_id id,
 {
 	int idx = 0;
 	struct la_client_info *ci = NULL;
-	unsigned int la_to_set = 0;
+	long long la_to_set = 0;
 	unsigned int dvfs_time_nsec = 0;
 	unsigned int dvfs_buffering_reqd_bytes = 0;
 	unsigned int thresh_dvfs_bytes = 0;
 	unsigned int total_buf_sz_bytes = 0;
 	int effective_mccif_buf_sz = 0;
-	unsigned int la_bw_upper_bound_nsec_fp = 0;
-	unsigned int la_bw_upper_bound_nsec = 0;
-	unsigned int la_nsec = 0;
+	long long la_bw_upper_bound_nsec_fp = 0;
+	long long la_bw_upper_bound_nsec = 0;
+	long long la_nsec = 0;
 
 	if (!is_display_client(id)) {
 		/* Non-display clients should be handled by t12x_set_la(...). */
@@ -1240,8 +1241,8 @@ static int t12x_set_disp_la(enum tegra_la_id id,
 					T12X_LA_FP_FACTOR /
 					bw_mbps;
 	la_bw_upper_bound_nsec_fp = la_bw_upper_bound_nsec_fp *
-					T12X_LA_FP_FACTOR /
-					T12X_LA_DISP_CATCHUP_FACTOR_FP;
+					(T12X_LA_FP_FACTOR /
+					T12X_LA_DISP_CATCHUP_FACTOR_FP);
 	la_bw_upper_bound_nsec_fp =
 		la_bw_upper_bound_nsec_fp -
 		(T12X_LA_ST_LA_MINUS_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP +
@@ -1253,12 +1254,12 @@ static int t12x_set_disp_la(enum tegra_la_id id,
 
 
 	la_nsec = min(la_bw_upper_bound_nsec,
-			(unsigned int)T12X_MAX_LA_NSEC);
+			(long long)T12X_MAX_LA_NSEC);
 
-	la_to_set = min(la_nsec / cs->ns_per_tick,
-			(unsigned int)T12X_MC_LA_MAX_VALUE);
+	la_to_set = min((long long)do_div(la_nsec, cs->ns_per_tick),
+			(long long)T12X_MC_LA_MAX_VALUE);
 
-	if (la_to_set < t12x_min_la(&disp_params))
+	if ((la_to_set < (long long)t12x_min_la(&disp_params)) || (la_to_set > 255))
 		return -1;
 
 	program_la(ci, la_to_set);

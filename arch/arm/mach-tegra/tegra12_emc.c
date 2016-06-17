@@ -38,14 +38,15 @@
 #include <mach/nct.h>
 #include <mach/nvdumper-footprint.h>
 
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "board.h"
-#include "dvfs.h"
+#include <linux/platform/tegra/dvfs.h>
 #include "iomap.h"
 #include "tegra12_emc.h"
 #include "tegra_emc_dt_parse.h"
-#include "devices.h"
-#include "common.h"
+#include "../../../../arch/arm/mach-tegra/devices.h"
+#include <linux/platform/tegra/common.h>
+
 
 #ifdef CONFIG_TEGRA_EMC_SCALING_ENABLE
 static bool emc_enable = true;
@@ -109,6 +110,13 @@ static struct emc_iso_usage tegra12_emc_iso_usage[] = {
 		BIT(EMC_USER_DC1) | BIT(EMC_USER_DC2) | BIT(EMC_USER_VI),
 		50, iso_share_calc_t124_general
 	},
+};
+
+static u32 tegra12_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz);
+
+static struct tegra_emc_dvfs_table_ops tegra12_emc_dvfs_table_ops = {
+	.get_dvfs_clk_change_latency_nsec =
+				tegra12_get_dvfs_clk_change_latency_nsec,
 };
 
 #define MHZ 1000000
@@ -989,7 +997,7 @@ static inline void emc_get_timing(struct tegra12_emc_table *timing)
 	timing->rate = clk_get_rate_locked(emc) / 1000;
 }
 
-u32 tegra12_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz)
+static u32 tegra12_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz)
 {
 	int i;
 
@@ -1548,7 +1556,7 @@ static bool tegra12_is_lpddr3(void)
 static void tegra12_pasr_apply_mask(u16 *mem_reg, void *cookie)
 {
 	u32 val = 0;
-	int device = (int)cookie;
+	int device = (int)(uintptr_t)cookie;
 
 	val = TEGRA_EMC_MODE_REG_17 | *mem_reg;
 	val |= device << TEGRA_EMC_MRW_DEV_SHIFT;
@@ -1556,7 +1564,7 @@ static void tegra12_pasr_apply_mask(u16 *mem_reg, void *cookie)
 	emc_writel(val, EMC_MRW);
 
 	pr_debug("%s: cookie = %d mem_reg = 0x%04x val = 0x%08x\n", __func__,
-			(int)cookie, *mem_reg, val);
+			(int)(uintptr_t)cookie, *mem_reg, val);
 }
 
 static void tegra12_pasr_remove_mask(phys_addr_t base, void *cookie)
@@ -1723,6 +1731,8 @@ int __init tegra12_emc_init(void)
 		}
 	}
 	tegra12_mc_holdoff_enable();
+
+	tegra_emc_dvfs_table_ops_init(&tegra12_emc_dvfs_table_ops);
 	return ret;
 }
 

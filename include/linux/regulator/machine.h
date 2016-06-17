@@ -102,6 +102,8 @@ struct regulator_state {
  * @disable_time: Turn-off time of the rails (unit: microseconds)
  * @ramp_delay_scale: x multiplier in % for increasing/decreasing ramp delay.
  *                 100% is 1x, 150% is 1.5x and so on.
+ * @disable_on_suspend: Disable rail on suspend. This is only applicable if
+ *                    rail is always ON.
  */
 struct regulation_constraints {
 
@@ -151,8 +153,10 @@ struct regulation_constraints {
 	unsigned boot_on:1;	/* bootloader/firmware enabled regulator */
 	unsigned apply_uV:1;	/* apply uV constraint if min == max */
 	unsigned boot_off:1;	/* bootloader/firmware disabled regulator */
+	unsigned bypass_on:1;	/* Bypass ON */
 	unsigned int ignore_current_constraint_init:1;
 	unsigned disable_parent_after_enable:1; /* SW based overcurrent protection */
+	unsigned disable_on_suspend:1; /* Disable rail on suspend */
 };
 
 /**

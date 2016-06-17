@@ -26,11 +26,6 @@ struct dma_map_ops {
 			       enum dma_data_direction dir,
 			       struct dma_attrs *attrs);
 
-	dma_addr_t (*map_pages)(struct device *dev, struct page **pages,
-				  dma_addr_t dma_handle, size_t count,
-				  enum dma_data_direction dir,
-				  struct dma_attrs *attrs);
-
 	dma_addr_t (*map_page_at)(struct device *dev, struct page *page,
 				  dma_addr_t dma_handle,
 				  unsigned long offset, size_t size,
@@ -73,6 +68,8 @@ struct dma_map_ops {
 			  struct dma_attrs *attrs);
 	size_t (*iova_get_free_total)(struct device *dev);
 	size_t (*iova_get_free_max)(struct device *dev);
+
+	phys_addr_t (*iova_to_phys)(struct device *dev, dma_addr_t iova);
 
 	int is_phys;
 };

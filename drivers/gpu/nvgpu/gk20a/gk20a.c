@@ -45,7 +45,6 @@
 #include <linux/clk/tegra.h>
 
 #include <linux/sched.h>
-#include <linux/input-cfboost.h>
 
 
 #include "gk20a.h"
@@ -70,6 +69,8 @@
 #define INTERFACE_NAME "nvhost%s-gpu"
 
 #define GK20A_NUM_CDEVS 5
+
+#define EMC3D_DEFAULT_RATIO 750
 
 #if defined(GK20A_DEBUG)
 u32 gk20a_dbg_mask = GK20A_DEFAULT_DBG_MASK;
@@ -615,9 +616,6 @@ static void gk20a_remove_support(struct platform_device *dev)
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
 
-	if (g->gk20a_cdev.gk20a_cooling_dev)
-		thermal_cooling_device_unregister(g->gk20a_cdev.gk20a_cooling_dev);
-
 	if (g->gr.remove_support)
 		g->gr.remove_support(&g->gr);
 
@@ -921,13 +919,6 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 
 	gk20a_scale_resume(pdev);
 
-#ifdef CONFIG_INPUT_CFBOOST
-	if (!g->boost_added) {
-		gk20a_dbg_info("add touch boost");
-		cfb_add_device(dev);
-		g->boost_added = true;
-	}
-#endif
 done:
 	return err;
 }
@@ -940,53 +931,6 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 	{ .compatible = "nvidia,generic-gk20a",
 		.data = &gk20a_generic_platform },
 	{ },
-};
-
-int tegra_gpu_get_max_state(struct thermal_cooling_device *cdev,
-		unsigned long *max_state)
-{
-	struct cooling_device_gk20a *gk20a_gpufreq_device = cdev->devdata;
-
-	*max_state = gk20a_gpufreq_device->gk20a_freq_table_size - 1;
-	return 0;
-}
-
-int tegra_gpu_get_cur_state(struct thermal_cooling_device *cdev,
-		unsigned long *cur_state)
-{
-	struct cooling_device_gk20a  *gk20a_gpufreq_device = cdev->devdata;
-
-	*cur_state = gk20a_gpufreq_device->gk20a_freq_state;
-	return 0;
-}
-
-int tegra_gpu_set_cur_state(struct thermal_cooling_device *c_dev,
-		unsigned long cur_state)
-{
-	u32 target_freq;
-	struct gk20a *g;
-	struct gpufreq_table_data *gpu_cooling_table;
-	struct cooling_device_gk20a *gk20a_gpufreq_device = c_dev->devdata;
-
-	BUG_ON(cur_state >= gk20a_gpufreq_device->gk20a_freq_table_size);
-
-	g = container_of(gk20a_gpufreq_device, struct gk20a, gk20a_cdev);
-
-	gpu_cooling_table = tegra_gpufreq_table_get();
-	target_freq = gpu_cooling_table[cur_state].frequency;
-
-	/* ensure a query for state will get the proper value */
-	gk20a_gpufreq_device->gk20a_freq_state = cur_state;
-
-	gk20a_clk_set_rate(g, target_freq);
-
-	return 0;
-}
-
-static struct thermal_cooling_device_ops tegra_gpu_cooling_ops = {
-	.get_max_state = tegra_gpu_get_max_state,
-	.get_cur_state = tegra_gpu_get_cur_state,
-	.set_cur_state = tegra_gpu_set_cur_state,
 };
 
 static int gk20a_create_device(
@@ -1323,7 +1267,6 @@ static int gk20a_probe(struct platform_device *dev)
 	struct gk20a *gk20a;
 	int err;
 	struct gk20a_platform *platform = NULL;
-	struct cooling_device_gk20a *gpu_cdev = NULL;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -1404,6 +1347,8 @@ static int gk20a_probe(struct platform_device *dev)
 		return err;
 	}
 
+	gk20a->emc3d_ratio = EMC3D_DEFAULT_RATIO;
+
 	/* Initialise scaling */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_init(dev);
@@ -1427,13 +1372,6 @@ static int gk20a_probe(struct platform_device *dev)
 	dev->dev.dma_parms = &gk20a->dma_parms;
 	dma_set_max_seg_size(&dev->dev, UINT_MAX);
 
-	gpu_cdev = &gk20a->gk20a_cdev;
-	gpu_cdev->gk20a_freq_table_size = tegra_gpufreq_table_size_get();
-	gpu_cdev->gk20a_freq_state = 0;
-	gpu_cdev->g = gk20a;
-	gpu_cdev->gk20a_cooling_dev = thermal_cooling_device_register("gk20a_cdev", gpu_cdev,
-					&tegra_gpu_cooling_ops);
-
 	gk20a->gr_idle_timeout_default =
 			CONFIG_GK20A_DEFAULT_TIMEOUT;
 	gk20a->timeouts_enabled = true;
@@ -1446,6 +1384,13 @@ static int gk20a_probe(struct platform_device *dev)
 		gk20a->elpg_enabled = true;
 		gk20a->aelpg_enabled = true;
 	}
+
+	/* set default values to aelpg parameters */
+	gk20a->pmu.aelpg_param[0] = APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;
+	gk20a->pmu.aelpg_param[1] = APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US;
+	gk20a->pmu.aelpg_param[2] = APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
+	gk20a->pmu.aelpg_param[3] = APCTRL_POWER_BREAKEVEN_DEFAULT_US;
+	gk20a->pmu.aelpg_param[4] = APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
 
 	gk20a_create_sysfs(dev);
 
@@ -1483,10 +1428,8 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	gk20a_dbg_fn("");
 
-#ifdef CONFIG_INPUT_CFBOOST
-	if (g->boost_added)
-		cfb_remove_device(&dev->dev);
-#endif
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
+		gk20a_scale_exit(dev);
 
 	if (g->remove_support)
 		g->remove_support(dev);
@@ -1536,11 +1479,6 @@ static int __init gk20a_init(void)
 static void __exit gk20a_exit(void)
 {
 	platform_driver_unregister(&gk20a_driver);
-}
-
-bool is_gk20a_module(struct platform_device *dev)
-{
-	return &gk20a_driver.driver == dev->dev.driver;
 }
 
 void gk20a_busy_noresume(struct platform_device *pdev)
@@ -1632,9 +1570,6 @@ int gk20a_do_idle(void)
 	int ref_cnt;
 	bool is_railgated;
 
-	if (!platform->can_railgate)
-		return -ENOSYS;
-
 	/* acquire busy lock to block other busy() calls */
 	down_write(&g->busy_lock);
 
@@ -1661,25 +1596,39 @@ int gk20a_do_idle(void)
 
 	/*
 	 * if GPU is now idle, we will have only one ref count
-	 * drop this ref which will rail gate the GPU
+	 * drop this ref which will rail gate the GPU (if GPU
+	 * railgate is supported)
+	 * if GPU railgate is not supported then we need to
+	 * explicitly reset it
 	 */
 	pm_runtime_put_sync(&pdev->dev);
 
-	/* add sufficient delay to allow GPU to rail gate */
-	msleep(platform->railgate_delay);
+	if (platform->can_railgate) {
+		/* add sufficient delay to allow GPU to rail gate */
+		msleep(platform->railgate_delay);
 
-	timeout = jiffies + msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
+		timeout = jiffies + msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
 
-	/* check in loop if GPU is railgated or not */
-	do {
-		msleep(1);
-		is_railgated = platform->is_railgated(pdev);
-	} while (!is_railgated && time_before(jiffies, timeout));
+		/* check in loop if GPU is railgated or not */
+		do {
+			msleep(1);
+			is_railgated = platform->is_railgated(pdev);
+		} while (!is_railgated && time_before(jiffies, timeout));
 
-	if (is_railgated)
+		if (is_railgated)
+			return 0;
+		else
+			goto fail_timeout;
+	} else {
+		pm_runtime_get_sync(&pdev->dev);
+		gk20a_pm_prepare_poweroff(&pdev->dev);
+
+		tegra_periph_reset_assert(platform->clk[0]);
+		udelay(10);
+
+		g->forced_reset = true;
 		return 0;
-	else
-		goto fail_timeout;
+	}
 
 fail:
 	pm_runtime_put_noidle(&pdev->dev);
@@ -1700,6 +1649,15 @@ int gk20a_do_unidle(void)
 	struct gk20a *g = get_gk20a(pdev);
 	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
 
+	if (g->forced_reset) {
+		tegra_periph_reset_deassert(platform->clk[0]);
+
+		gk20a_pm_finalize_poweron(&pdev->dev);
+		pm_runtime_put_sync(&pdev->dev);
+
+		g->forced_reset = false;
+	}
+
 	/* release the lock and open up all other busy() calls */
 	mutex_unlock(&platform->railgate_lock);
 	up_write(&g->busy_lock);
@@ -1719,9 +1677,10 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	gpu->bus_type = NVHOST_GPU_BUS_TYPE_AXI; /* always AXI for now */
 
-	gpu->big_page_size = g->mm.big_page_size;
-	gpu->compression_page_size = g->mm.compression_page_size;
-	gpu->pde_coverage_bit_count = g->mm.pde_stride_shift;
+	gpu->big_page_size = g->mm.pmu.vm.big_page_size;
+	gpu->compression_page_size = g->mm.pmu.vm.compression_page_size;
+	gpu->pde_coverage_bit_count = g->mm.pmu.vm.pde_stride_shift;
+
 	gpu->reserved = 0;
 
 	return 0;

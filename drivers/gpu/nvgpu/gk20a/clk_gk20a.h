@@ -31,18 +31,18 @@ enum {
 
 struct pll {
 	u32 id;
-	u32 clk_in;	/* MHz */
+	u32 clk_in;	/* KHz */
 	u32 M;
 	u32 N;
 	u32 PL;
-	u32 freq;	/* MHz */
+	u32 freq;	/* KHz */
 	bool enabled;
 };
 
 struct pll_parms {
-	u32 min_freq, max_freq;	/* MHz */
-	u32 min_vco, max_vco;	/* MHz */
-	u32 min_u,   max_u;	/* MHz */
+	u32 min_freq, max_freq;	/* KHz */
+	u32 min_vco, max_vco;	/* KHz */
+	u32 min_u,   max_u;	/* KHz */
 	u32 min_M,   max_M;
 	u32 min_N,   max_N;
 	u32 min_PL,  max_PL;
@@ -57,15 +57,6 @@ struct clk_gk20a {
 	bool sw_ready;
 	bool clk_hw_on;
 };
-
-struct gpufreq_table_data {
-	unsigned int index;
-	unsigned int frequency; /* MHz */
-};
-
-struct gpufreq_table_data *tegra_gpufreq_table_get(void);
-
-unsigned int tegra_gpufreq_table_size_get(void);
 
 int gk20a_init_clk_support(struct gk20a *g);
 
@@ -82,13 +73,13 @@ extern struct pll_parms gpc_pll_params;
 
 static inline unsigned long rate_gpc2clk_to_gpu(unsigned long rate)
 {
-	/* convert the MHz gpc2clk frequency to Hz gpcpll frequency */
-	return (rate * MHZ) / 2;
+	/* convert the kHz gpc2clk frequency to Hz gpcpll frequency */
+	return (rate * KHZ) / 2;
 }
 static inline unsigned long rate_gpu_to_gpc2clk(unsigned long rate)
 {
-	/* convert the Hz gpcpll frequency to MHz gpc2clk frequency */
-	return (rate * 2) / MHZ;
+	/* convert the Hz gpcpll frequency to kHz gpc2clk frequency */
+	return (rate * 2) / KHZ;
 }
 
 #endif /* _NVHOST_CLK_GK20A_H_ */

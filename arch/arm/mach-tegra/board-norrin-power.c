@@ -33,14 +33,14 @@
 #include <mach/edp.h>
 #include <mach/gpio-tegra.h>
 
-#include "cpu-tegra.h"
+#include <linux/platform/tegra/cpu-tegra.h>
 #include "pm.h"
 #include "tegra-board-id.h"
 #include "board.h"
 #include "gpio-names.h"
 #include "board-common.h"
 #include "board-ardbeg.h"
-#include "tegra_cl_dvfs.h"
+#include <linux/platform/tegra/tegra_cl_dvfs.h>
 #include "devices.h"
 #include "tegra11_soctherm.h"
 #include "iomap.h"

@@ -35,8 +35,8 @@
 #include <linux/pm_qos.h>
 
 #include "pm.h"
-#include "cpu-tegra.h"
-#include "clock.h"
+#include <linux/platform/tegra/cpu-tegra.h>
+#include <linux/platform/tegra/clock.h>
 
 #define INITIAL_STATE		TEGRA_HP_DISABLED
 #define UP2G0_DELAY_MS		70

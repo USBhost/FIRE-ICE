@@ -1434,8 +1434,8 @@ static int ov9772_regulator_get(
 
 	reg = regulator_get(&info->i2c_client->dev, vreg_name);
 	if (IS_ERR(reg)) {
-		dev_err(&info->i2c_client->dev, "%s %s ERR: %d\n",
-			__func__, vreg_name, (int)reg);
+		dev_err(&info->i2c_client->dev, "%s %s ERR: %p\n",
+			__func__, vreg_name, reg);
 		err = PTR_ERR(reg);
 		reg = NULL;
 	} else
@@ -1745,7 +1745,7 @@ static int ov9772_param_rd(struct ov9772_info *info, unsigned long arg)
 		}
 
 		if (copy_from_user(p_i2c_table,
-				(const void __user *)params.p_value,
+				(const void __user *)(uintptr_t)params.p_value,
 				params.sizeofvalue)) {
 			dev_err(&info->i2c_client->dev,
 				"%s copy_from_user err line %d\n",
@@ -1757,7 +1757,7 @@ static int ov9772_param_rd(struct ov9772_info *info, unsigned long arg)
 		ov9772_pm_dev_wr(info, NVC_PWR_COMM);
 		err = ov9772_i2c_rd_table(info, p_i2c_table);
 		ov9772_pm_dev_wr(info, NVC_PWR_OFF);
-		if (copy_to_user((void __user *)params.p_value,
+		if (copy_to_user((void __user *)(uintptr_t)params.p_value,
 				 p_i2c_table,
 				 params.sizeofvalue)) {
 			dev_err(&info->i2c_client->dev,
@@ -1782,7 +1782,7 @@ static int ov9772_param_rd(struct ov9772_info *info, unsigned long arg)
 		return -EINVAL;
 	}
 
-	if (copy_to_user((void __user *)params.p_value,
+	if (copy_to_user((void __user *)(uintptr_t)params.p_value,
 			 data_ptr,
 			 data_size)) {
 		dev_err(&info->i2c_client->dev,
@@ -1857,7 +1857,7 @@ static int ov9772_param_wr_s(struct ov9772_info *info,
 		}
 
 		if (copy_from_user(p_i2c_table,
-				(const void __user *)params->p_value,
+				(const void __user *)(uintptr_t)params->p_value,
 				params->sizeofvalue)) {
 			dev_err(&info->i2c_client->dev,
 				"%s copy_from_user err line %d\n",
@@ -1893,7 +1893,8 @@ static int ov9772_param_wr(struct ov9772_info *info, unsigned long arg)
 		return -EFAULT;
 	}
 
-	if (copy_from_user(&u32val, (const void __user *)params.p_value,
+	if (copy_from_user(&u32val,
+			(const void __user *)(uintptr_t)params.p_value,
 			sizeof(u32val))) {
 		dev_err(&info->i2c_client->dev, "%s %d copy_from_user err\n",
 			__func__, __LINE__);
@@ -1981,7 +1982,8 @@ static int ov9772_param_wr(struct ov9772_info *info, unsigned long arg)
 		struct nvc_imager_ae ae;
 		dev_dbg(&info->i2c_client->dev, "%s GROUP_HOLD\n",
 			__func__);
-		if (copy_from_user(&ae, (const void __user *)params.p_value,
+		if (copy_from_user(&ae,
+				(const void __user *)(uintptr_t)params.p_value,
 				sizeof(struct nvc_imager_ae))) {
 			dev_err(&info->i2c_client->dev,
 				"%s %d copy_from_user err\n",
@@ -2233,8 +2235,9 @@ static long ov9772_ioctl(struct file *file,
 		return 0;
 
 	case _IOC_NR(NVC_IOCTL_STATIC_RD):
-		dev_dbg(&info->i2c_client->dev, "%s STATIC_RD n=%d\n",
-			__func__, sizeof(struct nvc_imager_static_nvc));
+		dev_dbg(&info->i2c_client->dev, "%s STATIC_RD n=%lu\n",
+			__func__,
+			(unsigned long)sizeof(struct nvc_imager_static_nvc));
 		data_ptr = &info->sdata;
 		if (copy_to_user((void __user *)arg,
 				 data_ptr,

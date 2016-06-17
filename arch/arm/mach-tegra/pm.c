@@ -75,14 +75,14 @@
 #include <mach/tegra_smmu.h>
 
 #include "board.h"
-#include "clock.h"
-#include "common.h"
+#include <linux/platform/tegra/clock.h>
+#include <linux/platform/tegra/common.h>
 #include "iomap.h"
 #include "pm.h"
-#include "reset.h"
+#include <linux/platform/tegra/reset.h>
 #include "sleep.h"
-#include "dvfs.h"
-#include "cpu-tegra.h"
+#include <linux/platform/tegra/dvfs.h>
+#include <linux/platform/tegra/cpu-tegra.h>
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #include "tegra14_scratch.h"
 #endif

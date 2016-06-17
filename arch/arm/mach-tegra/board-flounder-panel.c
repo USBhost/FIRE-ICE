@@ -29,6 +29,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/of.h>
 #include <linux/dma-contiguous.h>
+#include <linux/dma-mapping.h>
 #include <linux/clk.h>
 
 #include <mach/irqs.h>
@@ -40,10 +41,10 @@
 #include "gpio-names.h"
 #include "board-flounder.h"
 #include "board-panel.h"
-#include "common.h"
+#include <linux/platform/tegra/common.h>
 #include "iomap.h"
 #include "tegra12_host1x_devices.h"
-#include "dvfs.h"
+#include <linux/platform/tegra/dvfs.h>
 
 struct platform_device * __init flounder_host1x_init(void)
 {
@@ -406,9 +407,9 @@ static struct tegra_panel *flounder_panel_configure(struct board_info *board_out
 	panel = &dsi_j_qxga_8_9;
 	dsi_instance = DSI_INSTANCE_0;
 	/*tegra_io_dpd_enable(&dsic_io);
-	tegra_io_dpd_enable(&dsid_io);*/
+	tegra_io_dpd_enable(&dsid_io);
 	if (board_out->board_id == BOARD_E1813)
-		panel = &dsi_s_wqxga_10_1;
+		panel = &dsi_s_wqxga_10_1;*/
 	if (dsi_instance_out)
 		*dsi_instance_out = dsi_instance;
 	return panel;
@@ -477,7 +478,7 @@ int __init flounder_panel_init(void)
 	flounder_carveouts[1].size = tegra_carveout_size;
 	flounder_carveouts[2].base = tegra_vpr_start;
 	flounder_carveouts[2].size = tegra_vpr_size;
-#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
+
 	generic_dma_info.name = "generic";
 	generic_dma_info.base = tegra_carveout_start;
 	generic_dma_info.size = tegra_carveout_size;
@@ -490,7 +491,7 @@ int __init flounder_panel_init(void)
 	vpr_dma_info.resize = true;
 	vpr_dma_info.cma_dev = &tegra_vpr_cma_dev;
 	vpr_dma_info.notifier.ops = &vpr_dev_ops;
-
+#ifdef CONFIG_NVMAP_USE_CMA_FOR_CARVEOUT
 	carveout_linear_set(&tegra_generic_cma_dev);
 	flounder_carveouts[1].cma_dev = &tegra_generic_cma_dev;
 	flounder_carveouts[1].resize = false;
@@ -498,6 +499,11 @@ int __init flounder_panel_init(void)
 	flounder_carveouts[2].cma_dev = &tegra_vpr_cma_dev;
 	flounder_carveouts[2].resize = true;
 
+	vpr_dma_info.size = SZ_32M;
+	vpr_dma_info.resize = true;
+	vpr_dma_info.cma_dev = &tegra_vpr_cma_dev;
+	vpr_dma_info.notifier.ops = &vpr_dev_ops;
+#endif
 
 	if (tegra_carveout_size) {
 		err = dma_declare_coherent_resizable_cma_memory(
@@ -515,7 +521,7 @@ int __init flounder_panel_init(void)
 			return err;
 		}
 	}
-#endif
+
 
 	err = platform_device_register(&flounder_nvmap_device);
 	if (err) {
@@ -544,6 +550,20 @@ int __init flounder_panel_init(void)
 		__tegra_clear_framebuffer(&flounder_nvmap_device,
 					  tegra_fb_start, tegra_fb_size);
 
+	/* Copy the bootloader fb2 to the fb2. */
+	if (tegra_bootloader_fb2_size)
+		__tegra_move_framebuffer(&flounder_nvmap_device,
+			tegra_fb2_start, tegra_bootloader_fb2_start,
+			min(tegra_fb2_size, tegra_bootloader_fb2_size));
+	else
+		__tegra_clear_framebuffer(&flounder_nvmap_device,
+				tegra_fb2_start, tegra_fb2_size);
+
+	res = platform_get_resource_byname(&flounder_disp2_device,
+					 IORESOURCE_MEM, "fbmem");
+	res->start = tegra_fb2_start;
+	res->end = tegra_fb2_start + tegra_fb2_size - 1;
+
 	flounder_disp1_device.dev.parent = &phost1x->dev;
 	err = platform_device_register(&flounder_disp1_device);
 	if (err) {
@@ -551,6 +571,8 @@ int __init flounder_panel_init(void)
 		return err;
 	}
 
+	flounder_disp2_device.dev.parent = &phost1x->dev;
+	flounder_disp2_out.hdmi_out = &flounder_hdmi_out;
 	err = tegra_init_hdmi(&flounder_disp2_device, phost1x);
 	if (err)
 		return err;

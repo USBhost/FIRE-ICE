@@ -115,6 +115,10 @@ struct dvfs_rail {
 	struct tegra_cooling_device *vmin_cdev;
 	struct tegra_cooling_device *vmax_cdev;
 	struct tegra_cooling_device *vts_cdev;
+
+	/* Vmax capping method */
+	int (*apply_vmax_cap)(int *cap_idx, int new_idx, int cap_mv);
+
 	struct rail_alignment alignment;
 	struct rail_stats stats;
 	const char *version;
@@ -166,6 +170,8 @@ struct dvfs {
 	int num_freqs;
 	struct dvfs_dfll_data dfll_data;
 	bool therm_dvfs;
+	/* Maximum rate safe at minimum voltage across all thermal ranges */
+	unsigned long fmax_at_vmin_safe_t;
 
 	int cur_millivolts;
 	unsigned long cur_rate;
@@ -274,6 +280,7 @@ int tegra_dvfs_replace_voltage_table(struct dvfs *d, const int *new_millivolts);
 
 int tegra_dvfs_dfll_mode_set(struct dvfs *d, unsigned long rate);
 int tegra_dvfs_dfll_mode_clear(struct dvfs *d, unsigned long rate);
+int tegra_dvfs_rail_set_reg_volatile(struct dvfs_rail *rail, bool set);
 
 struct tegra_cooling_device *tegra_dvfs_get_cpu_vmax_cdev(void);
 struct tegra_cooling_device *tegra_dvfs_get_cpu_vmin_cdev(void);

@@ -21,7 +21,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/delay.h>
-#include "../../../arch/arm/mach-tegra/clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "tegra_ism.h"
 #include "tegra_apb2jtag.h"
 

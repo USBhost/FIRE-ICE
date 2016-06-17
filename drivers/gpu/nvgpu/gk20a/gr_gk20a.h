@@ -22,8 +22,9 @@
 
 #include "gr_ctx_gk20a.h"
 
-#define GR_IDLE_CHECK_DEFAULT		100 /* usec */
-#define GR_IDLE_CHECK_MAX		5000 /* usec */
+#define GR_IDLE_CHECK_DEFAULT		10 /* usec */
+#define GR_IDLE_CHECK_MAX		200 /* usec */
+#define GR_FECS_POLL_INTERVAL		5 /* usec */
 
 #define INVALID_SCREEN_TILE_ROW_OFFSET	0xFFFFFFFF
 #define INVALID_MAX_WAYS		0xFFFFFFFF
@@ -314,6 +315,28 @@ struct gk20a_ctxsw_bootloader_desc {
 	u32 entry_point;
 };
 
+struct fecs_method_op_gk20a {
+	struct {
+		u32 addr;
+		u32 data;
+	} method;
+
+	struct {
+		u32 id;
+		u32 data;
+		u32 clr;
+		u32 *ret;
+		u32 ok;
+		u32 fail;
+	} mailbox;
+
+	struct {
+		u32 ok;
+		u32 fail;
+	} cond;
+
+};
+
 struct gpu_ops;
 void gk20a_init_gr(struct gk20a *g);
 void gk20a_init_gr_ops(struct gpu_ops *gops);
@@ -414,4 +437,7 @@ void gr_gk20a_get_sm_dsm_perf_ctrl_regs(struct gk20a *g,
 					u32 **sm_dsm_perf_regs,
 					u32 *perf_register_stride);
 int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr);
+int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
+				   struct fecs_method_op_gk20a op,
+				   bool sleepduringwait);
 #endif /*__GR_GK20A_H__*/

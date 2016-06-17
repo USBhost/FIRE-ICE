@@ -22,9 +22,7 @@
 #define __PMU_GK20A_H__
 
 /* defined by pmu hw spec */
-#define GK20A_PMU_VA_START		((128 * 1024) << 10)
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
-#define GK20A_PMU_INST_SIZE		(4 * 1024)
 #define GK20A_PMU_UCODE_SIZE_MAX	(256 * 1024)
 #define GK20A_PMU_SEQ_BUF_SIZE		4096
 
@@ -257,7 +255,7 @@ union pmu_ap_msg {
 #define APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US                   (100)
 #define APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US                 (10000)
 #define APCTRL_POWER_BREAKEVEN_DEFAULT_US                       (2000)
-#define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (100)
+#define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (200)
 
 /*
  * Disable reason for Adaptive Power Controller
@@ -1052,6 +1050,8 @@ struct pmu_gk20a {
 	bool perfmon_ready;
 
 	u32 sample_buffer;
+	u32 load_shadow;
+	u32 load_avg;
 
 	struct mutex isr_mutex;
 	struct mutex isr_enable_lock;
@@ -1062,6 +1062,7 @@ struct pmu_gk20a {
 		struct pmu_cmdline_args_v0 args_v0;
 		struct pmu_cmdline_args_v1 args_v1;
 	};
+	u32 aelpg_param[5];
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);
@@ -1086,9 +1087,15 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token);
 int gk20a_pmu_destroy(struct gk20a *g);
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
+int gk20a_pmu_load_update(struct gk20a *g);
 int gk20a_pmu_debugfs_init(struct platform_device *dev);
 void gk20a_pmu_reset_load_counters(struct gk20a *g);
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 		u32 *total_cycles);
+
+int gk20a_pmu_ap_send_command(struct gk20a *g,
+		union pmu_ap_cmd *p_ap_cmd, bool b_block);
+int gk20a_aelpg_init(struct gk20a *g);
+int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 
 #endif /*__PMU_GK20A_H__*/

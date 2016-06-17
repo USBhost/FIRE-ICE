@@ -23,74 +23,33 @@
 #include <linux/nvmap.h>
 #include <linux/tegra_pm_domains.h>
 
-#include <mach/irqs.h>
 
-#include "../../../arch/arm/mach-tegra/iomap.h"
+#include <linux/platform/tegra/clock.h>
+#include <linux/platform/tegra/dvfs.h>
+#include <linux/platform/tegra/common.h>
+#include <linux/clk/tegra.h>
+#include <mach/tegra_emc.h>
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
 #include "platform_gk20a.h"
 #include "gk20a_scale.h"
 
-#define TEGRA_GK20A_INTR		INT_GPU
-#define TEGRA_GK20A_INTR_NONSTALL	INT_GPU_NONSTALL
-
-#define TEGRA_GK20A_SIM_BASE 0x538F0000 /*tbd: get from iomap.h */
-#define TEGRA_GK20A_SIM_SIZE 0x1000     /*tbd: this is a high-side guess */
+#define TEGRA_GK20A_BW_PER_FREQ 32
+#define TEGRA_GM20B_BW_PER_FREQ 64
+#define TEGRA_DDR3_BW_PER_FREQ 16
+#define TEGRA_DDR4_BW_PER_FREQ 16
 
 extern struct device tegra_vpr_dev;
 struct gk20a_platform t132_gk20a_tegra_platform;
 
 struct gk20a_emc_params {
-	long				emc_slope;
-	long				emc_offset;
-	long				emc_dip_slope;
-	long				emc_dip_offset;
-	long				emc_xmid;
-	bool				linear;
+	long bw_ratio;
+	long freq_last_set;
 };
-
-/*
- * 20.12 fixed point arithmetic
- */
-
-static const int FXFRAC = 12;
-static const int FX_HALF = (1 << 12) / 2;
-
-#define INT_TO_FX(x) ((x) << FXFRAC)
-#define FX_TO_INT(x) ((x) >> FXFRAC)
 
 #define MHZ_TO_HZ(x) ((x) * 1000000)
 #define HZ_TO_MHZ(x) ((x) / 1000000)
-
-int FXMUL(int x, int y)
-{
-	return ((long long) x * (long long) y) >> FXFRAC;
-}
-
-int FXDIV(int x, int y)
-{
-	/* long long div operation not supported, must shift manually. This
-	 * would have been
-	 *
-	 *    return (((long long) x) << FXFRAC) / (long long) y;
-	 */
-	int pos, t;
-	if (x == 0)
-		return 0;
-
-	/* find largest allowable right shift to numerator, limit to FXFRAC */
-	t = x < 0 ? -x : x;
-	pos = 31 - fls(t); /* fls can't be 32 if x != 0 */
-	if (pos > FXFRAC)
-		pos = FXFRAC;
-
-	y >>= FXFRAC - pos;
-	if (y == 0)
-		return 0x7FFFFFFF; /* overflow, return MAX_FIXED */
-
-	return (x << pos) / y;
-}
 
 static void gk20a_tegra_secure_page_destroy(struct platform_device *pdev,
 				       struct secure_page_buffer *secure_buffer)
@@ -188,22 +147,27 @@ fail:
  * This function returns the minimum emc clock based on gpu frequency
  */
 
-long gk20a_tegra_get_emc_rate(struct gk20a_emc_params *emc_params, long freq)
+static unsigned long gk20a_tegra_get_emc_rate(struct gk20a *g,
+				struct gk20a_emc_params *emc_params)
 {
-	long hz;
+	unsigned long gpu_freq, gpu_fmax_at_vmin;
+	unsigned long emc_rate, emc_scale;
 
-	freq = INT_TO_FX(HZ_TO_MHZ(freq));
-	hz = FXMUL(freq, emc_params->emc_slope) + emc_params->emc_offset;
+	gpu_freq = clk_get_rate(g->clk.tegra_clk);
+	gpu_fmax_at_vmin = tegra_dvfs_get_fmax_at_vmin_safe_t(
+		clk_get_parent(g->clk.tegra_clk));
 
-	hz -= FXMUL(emc_params->emc_dip_slope,
-		FXMUL(freq - emc_params->emc_xmid,
-			freq - emc_params->emc_xmid)) +
-		emc_params->emc_dip_offset;
+	/* When scaling emc, account for the gpu load when the
+	 * gpu frequency is less than or equal to fmax@vmin. */
+	if (gpu_freq <= gpu_fmax_at_vmin)
+		emc_scale = min(g->pmu.load_avg, g->emc3d_ratio);
+	else
+		emc_scale = g->emc3d_ratio;
 
-	hz = MHZ_TO_HZ(FX_TO_INT(hz + FX_HALF)); /* round to nearest */
-	hz = (hz < 0) ? 0 : hz;
+	emc_rate =
+		(HZ_TO_MHZ(gpu_freq) * emc_params->bw_ratio * emc_scale) / 1000;
 
-	return hz;
+	return MHZ_TO_HZ(emc_rate);
 }
 
 /*
@@ -219,11 +183,39 @@ static void gk20a_tegra_postscale(struct platform_device *pdev,
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct gk20a_emc_params *emc_params = profile->private_data;
 	struct gk20a *g = get_gk20a(pdev);
+	struct clk *emc_clk = platform->clk[2];
+	enum tegra_chipid chip_id = tegra_get_chip_id();
+	unsigned long emc_target;
+	long emc_freq_rounded;
 
-	long after = gk20a_clk_get_rate(g);
-	long emc_target = gk20a_tegra_get_emc_rate(emc_params, after);
+	emc_target = gk20a_tegra_get_emc_rate(g, emc_params);
 
-	clk_set_rate(platform->clk[2], emc_target);
+	switch (chip_id) {
+	case TEGRA_CHIPID_TEGRA12:
+	case TEGRA_CHIPID_TEGRA13:
+		/* T124 and T132 don't apply any rounding. The resulting
+		 * emc frequency gets implicitly rounded up after issuing
+		 * the clock_set_request.
+		 * So explicitly round up the emc target here to achieve
+		 * the same outcome. */
+		emc_freq_rounded =
+			tegra_emc_round_rate_updown(emc_target, true);
+		break;
+
+	case TEGRA_CHIPID_UNKNOWN:
+	default:
+		/* a proper rounding function needs to be implemented
+		 * for emc in t18x */
+		emc_freq_rounded = clk_round_rate(emc_clk, emc_target);
+		break;
+	}
+
+	/* only change the emc clock if new rounded frequency is different
+	 * from previously set emc rate */
+	if (emc_freq_rounded != emc_params->freq_last_set) {
+		clk_set_rate(emc_clk, emc_freq_rounded);
+		emc_params->freq_last_set = emc_freq_rounded;
+	}
 }
 
 /*
@@ -244,94 +236,33 @@ static void gk20a_tegra_prescale(struct platform_device *pdev)
 /*
  * gk20a_tegra_calibrate_emc()
  *
- * Compute emc scaling parameters
- *
- * Remc = S * R3d + O - (Sd * (R3d - Rm)^2 + Od)
- *
- * Remc - 3d.emc rate
- * R3d  - 3d.cbus rate
- * Rm   - 3d.cbus 'middle' rate = (max + min)/2
- * S    - emc_slope
- * O    - emc_offset
- * Sd   - emc_dip_slope
- * Od   - emc_dip_offset
- *
- * this superposes a quadratic dip centered around the middle 3d
- * frequency over a linear correlation of 3d.emc to 3d clock
- * rates.
- *
- * S, O are chosen so that the maximum 3d rate produces the
- * maximum 3d.emc rate exactly, and the minimum 3d rate produces
- * at least the minimum 3d.emc rate.
- *
- * Sd and Od are chosen to produce the largest dip that will
- * keep 3d.emc frequencies monotonously decreasing with 3d
- * frequencies. To achieve this, the first derivative of Remc
- * with respect to R3d should be zero for the minimal 3d rate:
- *
- *   R'emc = S - 2 * Sd * (R3d - Rm)
- *   R'emc(R3d-min) = 0
- *   S = 2 * Sd * (R3d-min - Rm)
- *     = 2 * Sd * (R3d-min - R3d-max) / 2
- *
- *   +------------------------------+
- *   | Sd = S / (R3d-min - R3d-max) |
- *   +------------------------------+
- *
- *   dip = Sd * (R3d - Rm)^2 + Od
- *
- * requiring dip(R3d-min) = 0 and dip(R3d-max) = 0 gives
- *
- *   Sd * (R3d-min - Rm)^2 + Od = 0
- *   Od = -Sd * ((R3d-min - R3d-max) / 2)^2
- *      = -Sd * ((R3d-min - R3d-max)^2) / 4
- *
- *   +------------------------------+
- *   | Od = (emc-max - emc-min) / 4 |
- *   +------------------------------+
- *
  */
 
-void gk20a_tegra_calibrate_emc(struct gk20a_emc_params *emc_params,
-			       struct clk *clk_3d, struct clk *clk_3d_emc)
+void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
+			       struct gk20a_emc_params *emc_params)
 {
-	long correction;
-	unsigned long max_emc;
-	unsigned long min_emc;
-	unsigned long min_rate_3d;
-	unsigned long max_rate_3d;
+	enum tegra_chipid cid = tegra_get_chipid();
+	long gpu_bw, emc_bw;
 
-	max_emc = clk_round_rate(clk_3d_emc, UINT_MAX);
-	max_emc = INT_TO_FX(HZ_TO_MHZ(max_emc));
+	/* store gpu bw based on soc */
+	switch (cid) {
+	case TEGRA_CHIPID_TEGRA12:
+	case TEGRA_CHIPID_TEGRA13:
+		gpu_bw = TEGRA_GK20A_BW_PER_FREQ;
+		break;
+	case TEGRA_CHIPID_UNKNOWN:
+	default:
+		gpu_bw = 0;
+		break;
+	}
 
-	min_emc = clk_round_rate(clk_3d_emc, 0);
-	min_emc = INT_TO_FX(HZ_TO_MHZ(min_emc));
+	/* TODO detect DDR type.
+	 * Okay for now since DDR3 and DDR4 have the same BW ratio */
+	emc_bw = TEGRA_DDR3_BW_PER_FREQ;
 
-	max_rate_3d = clk_round_rate(clk_3d, UINT_MAX);
-	max_rate_3d = INT_TO_FX(HZ_TO_MHZ(max_rate_3d));
-
-	min_rate_3d = clk_round_rate(clk_3d, 0);
-	min_rate_3d = INT_TO_FX(HZ_TO_MHZ(min_rate_3d));
-
-	emc_params->emc_slope =
-		FXDIV((max_emc - min_emc), (max_rate_3d - min_rate_3d));
-	emc_params->emc_offset = max_emc -
-		FXMUL(emc_params->emc_slope, max_rate_3d);
-	/* Guarantee max 3d rate maps to max emc rate */
-	emc_params->emc_offset += max_emc -
-		(FXMUL(emc_params->emc_slope, max_rate_3d) +
-		emc_params->emc_offset);
-
-	emc_params->emc_dip_offset = (max_emc - min_emc) / 4;
-	emc_params->emc_dip_slope =
-		-FXDIV(emc_params->emc_slope, max_rate_3d - min_rate_3d);
-	emc_params->emc_xmid = (max_rate_3d + min_rate_3d) / 2;
-	correction =
-		emc_params->emc_dip_offset +
-			FXMUL(emc_params->emc_dip_slope,
-			FXMUL(max_rate_3d - emc_params->emc_xmid,
-				max_rate_3d - emc_params->emc_xmid));
-	emc_params->emc_dip_offset -= correction;
+	/* Calculate the bandwidth ratio of gpu_freq <-> emc_freq
+	 *   NOTE the ratio must come out as an integer */
+	emc_params->bw_ratio = (gpu_bw / emc_bw);
 }
 
 /*
@@ -426,7 +357,7 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
-		struct gk20a_emc_params *emc_params;
+	struct gk20a_emc_params *emc_params;
 
 	if (!profile)
 		return;
@@ -435,8 +366,8 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 	if (!emc_params)
 		return;
 
-	gk20a_tegra_calibrate_emc(emc_params, gk20a_clk_get(platform->g),
-				  platform->clk[2]);
+	emc_params->freq_last_set = -1;
+	gk20a_tegra_calibrate_emc(pdev, emc_params);
 
 	profile->private_data = emc_params;
 }
@@ -480,34 +411,6 @@ static int gk20a_tegra_suspend(struct device *dev)
 	tegra_edp_notify_gpu_load(0, 0);
 	return 0;
 }
-
-static struct resource gk20a_tegra_resources[] = {
-	{
-	.start = TEGRA_GK20A_BAR0_BASE,
-	.end   = TEGRA_GK20A_BAR0_BASE + TEGRA_GK20A_BAR0_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{
-	.start = TEGRA_GK20A_BAR1_BASE,
-	.end   = TEGRA_GK20A_BAR1_BASE + TEGRA_GK20A_BAR1_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{ /* Used on ASIM only */
-	.start = TEGRA_GK20A_SIM_BASE,
-	.end   = TEGRA_GK20A_SIM_BASE + TEGRA_GK20A_SIM_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	{
-	.start = TEGRA_GK20A_INTR,
-	.end   = TEGRA_GK20A_INTR,
-	.flags = IORESOURCE_IRQ,
-	},
-	{
-	.start = TEGRA_GK20A_INTR_NONSTALL,
-	.end   = TEGRA_GK20A_INTR_NONSTALL,
-	.flags = IORESOURCE_IRQ,
-	},
-};
 
 struct gk20a_platform t132_gk20a_tegra_platform = {
 	.has_syncpoints = true,
@@ -563,13 +466,4 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
-};
-
-struct platform_device tegra_gk20a_device = {
-	.name		= "gk20a",
-	.resource	= gk20a_tegra_resources,
-	.num_resources	= ARRAY_SIZE(gk20a_tegra_resources),
-	.dev		= {
-		.platform_data = &gk20a_tegra_platform,
-	},
 };

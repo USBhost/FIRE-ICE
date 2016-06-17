@@ -4,11 +4,9 @@ asflags-y				+= -march=armv7-a
 subdir-ccflags-y := -Werror
 
 obj-y                                   += ahb.o
-obj-y                                   += common.o
 obj-y                                   += devices.o
 obj-y                                   += board-info.o
 obj-y                                   += io.o
-obj-y                                   += clock.o
 obj-$(CONFIG_HAVE_ARM_TWD)              += cpu_timer_twd.o
 
 obj-$(CONFIG_PM_SLEEP)                  += tegra-wakeups.o
@@ -23,9 +21,7 @@ ifeq ($(CONFIG_CPU_IDLE),y)
 obj-$(CONFIG_PM_SLEEP)                  += cpuidle-t2.o
 endif
 else
-obj-y                                   += pm-t3.o
 obj-y                                   += sleep-t30.o
-obj-$(CONFIG_DEBUG_FS)                  += clocks_stats.o
 obj-y                                   += tegra_core_volt_cap.o
 obj-$(CONFIG_TEGRA_USE_SIMON)           += tegra_simon.o
 ifeq ($(CONFIG_ARCH_TEGRA_12x_SOC),y)
@@ -61,17 +57,12 @@ obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += powergate-t12x.o
 
 obj-y                                   += apbio.o
 obj-$(CONFIG_TEGRA_ARB_SEMAPHORE)       += arb_sema.o
-obj-y                                   += dvfs.o
-ifeq ($(CONFIG_ARCH_TEGRA_13x_SOC),y)
-obj-y                                   += tegra13_dvfs.o
-else
-obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra12_dvfs.o
-endif
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra_emc_therm.o
 
 obj-y                                   += latency_allowance.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra12x_la.o
 obj-$(CONFIG_TEGRA_EDP_LIMITS)          += edp.o
+obj-$(CONFIG_TEGRA_GPU_EDP)             += gpu-edp.o
 obj-$(CONFIG_TEGRA_CORE_EDP_LIMITS)     += edp_core.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra12_edp.o
 ifeq ($(CONFIG_ARCH_TEGRA_13x_SOC),y)
@@ -91,15 +82,10 @@ obj-y					+= tegra_emc.o
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)		+= tegra20_speedo.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)		+= tegra30_speedo.o
 obj-$(CONFIG_HOTPLUG_CPU)               += hotplug.o
-obj-y                                   += flowctrl.o
 obj-$(CONFIG_CPU_IDLE)                  += cpuidle.o
 obj-$(CONFIG_CPU_IDLE)                  += sleep.o
-obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra12_clocks.o
 obj-$(CONFIG_SMP)                       += platsmp.o
-obj-y                                   += reset.o
 obj-y                                   += headsmp.o
-obj-$(CONFIG_CPU_FREQ)                  += cpu-tegra.o
-ifeq ($(CONFIG_TEGRA_AUTO_HOTPLUG),y)
 ifeq ($(CONFIG_TEGRA_CPUQUIET),y)
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += cpuquiet.o
 else
@@ -113,9 +99,7 @@ ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE),y)
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra3_throttle.o
 endif
 obj-$(CONFIG_DEBUG_ICEDCC)              += sysfs-dcc.o
-obj-$(CONFIG_TEGRA_CLUSTER_CONTROL)     += sysfs-cluster.o
 obj-$(CONFIG_TEGRA_DYNAMIC_PWRDET)      += powerdetect.o
-obj-$(CONFIG_ARCH_TEGRA_HAS_CL_DVFS)    += tegra_cl_dvfs.o
 
 obj-$(CONFIG_ARCH_TEGRA_2x_SOC)         += board-dt-tegra20.o
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += board-dt-tegra30.o

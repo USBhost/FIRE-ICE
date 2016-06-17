@@ -34,12 +34,13 @@
 #include <linux/gpio.h>
 #include <linux/regulator/tegra-dfll-bypass-regulator.h>
 #include <linux/tegra-fuse.h>
+#include <linux/tegra-pmc.h>
 
 #include <asm/mach-types.h>
 #include <mach/pinmux-t12.h>
 
 #include "pm.h"
-#include "dvfs.h"
+#include <linux/platform/tegra/dvfs.h>
 #include "board.h"
 #include "tegra-board-id.h"
 #include "board-common.h"
@@ -47,11 +48,12 @@
 #include "board-pmu-defines.h"
 #include "devices.h"
 #include "iomap.h"
-#include "tegra_cl_dvfs.h"
+#include <linux/platform/tegra/tegra_cl_dvfs.h>
 #include "tegra11_soctherm.h"
 
 #define PMC_CTRL                0x0
 #define PMC_CTRL_INTR_LOW       (1 << 17)
+void tegra13x_vdd_cpu_align(int step_uv, int offset_uv);
 
 static void flounder_board_suspend(int state, enum suspend_stage stage)
 {
@@ -105,6 +107,8 @@ int __init flounder_suspend_init(void)
 
 /************************ FLOUNDER CL-DVFS DATA *********************/
 #define FLOUNDER_DEFAULT_CVB_ALIGNMENT	10000
+#define FLOUNDER_CPU_VDD_MIN_UV		703000
+#define FLOUNDER_CPU_VDD_STEP_UV	10000
 
 #ifdef CONFIG_ARCH_TEGRA_HAS_CL_DVFS
 static struct tegra_cl_dvfs_cfg_param e1736_flounder_cl_dvfs_param = {
@@ -147,6 +151,13 @@ static struct tegra_cl_dvfs_platform_data e1736_cl_dvfs_data = {
 
 	.cfg_param = &e1736_flounder_cl_dvfs_param,
 };
+
+static const struct of_device_id dfll_of_match[] = {
+	{ .compatible	= "nvidia,tegra124-dfll", },
+	{ .compatible	= "nvidia,tegra132-dfll", },
+	{ },
+};
+
 static int __init flounder_cl_dvfs_init(void)
 {
 	struct tegra_cl_dvfs_platform_data *data = NULL;
@@ -162,15 +173,17 @@ static int __init flounder_cl_dvfs_init(void)
 	return 0;
 }
 #else
-static inline int flounder_cl_dvfs_init(void)
+static inline int flounder_cl_dvfs_init()
 { return 0; }
 #endif
+
 
 int __init flounder_rail_alignment_init(void)
 {
 #ifdef CONFIG_ARCH_TEGRA_13x_SOC
+	tegra13x_vdd_cpu_align(FLOUNDER_CPU_VDD_STEP_UV, 0);
 #else
-	tegra12x_vdd_cpu_align(FLOUNDER_DEFAULT_CVB_ALIGNMENT, 0);
+	tegra12x_vdd_cpu_align(FLOUNDER_CPU_VDD_STEP_UV, 0);
 #endif
 	return 0;
 }
@@ -189,6 +202,7 @@ int __init flounder_regulator_init(void)
 
 	platform_device_register(&power_supply_extcon_device);
 
+/*	flounder_cl_dvfs_init();*/
 	return 0;
 }
 
@@ -204,6 +218,7 @@ int __init flounder_edp_init(void)
 	pr_info("%s: CPU regulator %d mA\n", __func__, regulator_mA);
 	tegra_init_cpu_edp_limits(regulator_mA);
 
+	regulator_mA = 14000;
 	pr_info("%s: GPU regulator %d mA\n", __func__, regulator_mA);
 	tegra_init_gpu_edp_limits(regulator_mA);
 

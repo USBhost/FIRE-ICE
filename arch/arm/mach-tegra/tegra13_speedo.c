@@ -29,7 +29,7 @@
 #include <linux/tegra-fuse.h>
 
 #include "iomap.h"
-#include "common.h"
+#include <linux/platform/tegra/common.h>
 
 #define CPU_PROCESS_CORNERS_NUM		2
 #define GPU_PROCESS_CORNERS_NUM		2
@@ -161,7 +161,7 @@ void tegra_init_speedo_data(void)
 	soc_iddq_value = tegra_fuse_readl(FUSE_SOC_IDDQ);
 	gpu_iddq_value = tegra_fuse_readl(FUSE_GPU_IDDQ);
 
-	cpu_speedo_value = 2500; //cpu_speedo_0_value;
+	cpu_speedo_value = cpu_speedo_0_value;
 
 	if (cpu_speedo_value == 0) {
 		cpu_speedo_value = 2100;

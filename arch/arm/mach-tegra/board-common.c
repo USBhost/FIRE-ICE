@@ -28,9 +28,9 @@
 #include "board.h"
 #include "board-common.h"
 #include "devices.h"
-#include "clock.h"
-#include "dvfs.h"
-#include "cpu-tegra.h"
+#include <linux/platform/tegra/clock.h>
+#include <linux/platform/tegra/dvfs.h>
+#include <linux/platform/tegra/cpu-tegra.h>
 
 extern unsigned long  debug_uart_port_base;
 extern struct clk *debug_uart_clk;

@@ -34,26 +34,13 @@
 
 /* from vbios PLL info table */
 struct pll_parms gpc_pll_params = {
-	144, 2064,	/* freq */
-	1000, 2064,	/* vco */
-	12, 38,		/* u */
-	1, 255,		/* M */
-	8, 255,		/* N */
-	1, 32,		/* PL */
+	144000, 2064000,	/* freq */
+	1000000, 2064000,	/* vco */
+	12000, 38000,		/* u */
+	1, 255,			/* M */
+	8, 255,			/* N */
+	1, 32,			/* PL */
 };
-
-static int num_gpu_cooling_freq;
-static struct gpufreq_table_data *gpu_cooling_freq;
-
-struct gpufreq_table_data *tegra_gpufreq_table_get(void)
-{
-	return gpu_cooling_freq;
-}
-
-unsigned int tegra_gpufreq_table_size_get(void)
-{
-	return num_gpu_cooling_freq;
-}
 
 static u8 pl_to_div[] = {
 /* PL:   0, 1, 2, 3, 4, 5, 6,  7,  8,  9, 10, 11, 12, 13, 14 */
@@ -441,8 +428,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	static int initialized;
-	unsigned long *freqs;
-	int err, num_freqs;
 	struct clk *ref;
 	unsigned long ref_rate;
 
@@ -467,7 +452,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	clk->pll_delay = 300; /* usec */
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
-	clk->gpc_pll.clk_in = ref_rate / 1000000; /* MHz */
+	clk->gpc_pll.clk_in = ref_rate / KHZ;
 
 	/* Decide initial frequency */
 	if (!initialized) {
@@ -478,32 +463,6 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.PL = 1;
 		clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 		clk->gpc_pll.freq /= pl_to_div[clk->gpc_pll.PL];
-	}
-
-	err = tegra_dvfs_get_freqs(clk_get_parent(clk->tegra_clk),
-				   &freqs, &num_freqs);
-	if (!err) {
-		int i, j;
-
-		/* init j for inverse traversal of frequencies */
-		j = num_freqs - 1;
-
-		gpu_cooling_freq = kzalloc(
-				(1 + num_freqs) * sizeof(*gpu_cooling_freq),
-				GFP_KERNEL);
-
-		/* store frequencies in inverse order */
-		for (i = 0; i < num_freqs; ++i, --j) {
-			gpu_cooling_freq[i].index = i;
-			gpu_cooling_freq[i].frequency = freqs[j];
-		}
-
-		/* add 'end of table' marker */
-		gpu_cooling_freq[i].index = i;
-		gpu_cooling_freq[i].frequency = GPUFREQ_TABLE_END;
-
-		/* store number of frequencies */
-		num_gpu_cooling_freq = num_freqs + 1;
 	}
 
 	mutex_init(&clk->clk_mutex);
@@ -777,7 +736,7 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	pl = trim_sys_gpcpll_coeff_pldiv_v(reg);
 	f = g->clk.gpc_pll.clk_in * n / (m * pl_to_div[pl]);
 	seq_printf(s, "coef = 0x%x : m = %u : n = %u : pl = %u", reg, m, n, pl);
-	seq_printf(s, " : pll_f(gpu_f) = %u(%u) MHz\n", f, f/2);
+	seq_printf(s, " : pll_f(gpu_f) = %u(%u) kHz\n", f, f/2);
 	mutex_unlock(&g->clk.clk_mutex);
 	return 0;
 }
@@ -801,7 +760,7 @@ static int monitor_get(void *data, u64 *val)
 	int err;
 
 	u32 ncycle = 100; /* count GPCCLK for ncycle of clkin */
-	u32 clkin = clk->gpc_pll.clk_in;
+	u64 freq = clk->gpc_pll.clk_in;
 	u32 count1, count2;
 
 	err = gk20a_busy(g->dev);
@@ -824,7 +783,10 @@ static int monitor_get(void *data, u64 *val)
 	count1 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));
 	udelay(100);
 	count2 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));
-	*val = (u64)(trim_gpc_clk_cntr_ncgpcclk_cnt_value_v(count2) * clkin / ncycle);
+	freq *= trim_gpc_clk_cntr_ncgpcclk_cnt_value_v(count2);
+	do_div(freq, ncycle);
+	*val = freq;
+
 	gk20a_idle(g->dev);
 
 	if (count1 != count2)

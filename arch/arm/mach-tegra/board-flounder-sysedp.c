@@ -24,7 +24,7 @@
 #include "board-flounder.h"
 #include "board.h"
 #include "board-panel.h"
-#include "common.h"
+#include <linux/platform/tegra/common.h>
 #include "tegra11_soctherm.h"
 
 /* --- EDP consumers data --- */

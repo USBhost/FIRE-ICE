@@ -38,8 +38,8 @@
 #include <asm/arch_timer.h>
 #include <asm/delay.h>
 
-#include "../../arch/arm/mach-tegra/clock.h"
-#include "../../arch/arm/mach-tegra/common.h"
+#include <linux/platform/tegra/clock.h>
+#include <linux/platform/tegra/common.h>
 
 static u32 arch_timer_us_mult, arch_timer_us_shift;
 

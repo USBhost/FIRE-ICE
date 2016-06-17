@@ -45,10 +45,6 @@ struct sim_gk20a;
 #include "therm_gk20a.h"
 #include "platform_gk20a.h"
 
-extern struct platform_device tegra_gk20a_device;
-
-bool is_gk20a_module(struct platform_device *dev);
-
 struct cooling_device_gk20a {
 	struct thermal_cooling_device *gk20a_cooling_dev;
 	unsigned int gk20a_freq_state;
@@ -202,6 +198,24 @@ struct gpu_ops {
 		int (*get_netlist_name)(int index, char *name);
 		bool (*is_fw_defined)(void);
 	} gr_ctx;
+	struct {
+		const struct regop_offset_range* (
+				*get_global_whitelist_ranges)(void);
+		int (*get_global_whitelist_ranges_count)(void);
+		const struct regop_offset_range* (
+				*get_context_whitelist_ranges)(void);
+		int (*get_context_whitelist_ranges_count)(void);
+		const u32* (*get_runcontrol_whitelist)(void);
+		int (*get_runcontrol_whitelist_count)(void);
+		const struct regop_offset_range* (
+				*get_runcontrol_whitelist_ranges)(void);
+		int (*get_runcontrol_whitelist_ranges_count)(void);
+		const u32* (*get_qctl_whitelist)(void);
+		int (*get_qctl_whitelist_count)(void);
+		const struct regop_offset_range* (
+				*get_qctl_whitelist_ranges)(void);
+		int (*get_qctl_whitelist_ranges_count)(void);
+	} regops;
 };
 
 struct gk20a {
@@ -214,9 +228,6 @@ struct gk20a {
 	void __iomem *bar1;
 
 	bool power_on;
-#ifdef CONFIG_INPUT_CFBOOST
-	bool boost_added;
-#endif
 
 	struct rw_semaphore busy_lock;
 
@@ -242,6 +253,10 @@ struct gk20a {
 	bool elpg_enabled;
 	bool aelpg_enabled;
 	bool forced_idle;
+	bool forced_reset;
+	bool allow_all;
+
+	u32 emc3d_ratio;
 
 #ifdef CONFIG_DEBUG_FS
 	spinlock_t debugfs_lock;

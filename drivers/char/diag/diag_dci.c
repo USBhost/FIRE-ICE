@@ -428,7 +428,7 @@ void extract_dci_events(unsigned char *buf, int len, int data_source)
 {
 	uint16_t event_id, event_id_packet, length, temp_len;
 	uint8_t payload_len, payload_len_field;
-	uint8_t timestamp[8], timestamp_len;
+	uint8_t timestamp[8] = {0}, timestamp_len;
 	uint8_t event_data[MAX_EVENT_SIZE];
 	unsigned int total_event_len;
 	struct list_head *start, *temp;
@@ -529,7 +529,7 @@ int dci_apps_write(struct diag_dci_client_tbl *entry)
 
 	/* Make sure we have a buffer and there is data in it */
 	if (!entry->dci_apps_data || entry->apps_data_len <= 0) {
-		pr_err("diag: In %s, Invalid dci apps data info, dci_apps_data: 0x%x, apps_data_len: %d\n", __func__, (unsigned int)entry->dci_apps_data, entry->apps_data_len);
+		pr_err("diag: In %s, Invalid dci apps data info, dci_apps_data: 0x%p, apps_data_len: %d\n", __func__, entry->dci_apps_data, entry->apps_data_len);
 		return -EINVAL;
 	}
 

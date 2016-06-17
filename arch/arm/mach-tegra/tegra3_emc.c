@@ -37,8 +37,8 @@
 
 #include <mach/latency_allowance.h>
 
-#include "clock.h"
-#include "dvfs.h"
+#include <linux/platform/tegra/clock.h>
+#include <linux/platform/tegra/dvfs.h>
 #include "tegra3_emc.h"
 #include "iomap.h"
 

@@ -35,9 +35,9 @@
 /* HACK -- need to pass this through DT */
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
-#include "../../../arch/arm/mach-tegra/clock.h"
+#include <linux/platform/tegra/clock.h>
 #include "tegra_usb_phy.h"
-#include "../../../arch/arm/mach-tegra/common.h"
+#include <linux/platform/tegra/common.h>
 
 /* HACK! This needs to come from DT */
 #include "../../../arch/arm/mach-tegra/iomap.h"

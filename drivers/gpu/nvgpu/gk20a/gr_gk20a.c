@@ -163,123 +163,6 @@ void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 	}
 }
 
-static void gr_gk20a_load_falcon_dmem(struct gk20a *g)
-{
-	u32 i, ucode_u32_size;
-	const u32 *ucode_u32_data;
-	u32 checksum;
-
-	gk20a_dbg_fn("");
-
-	gk20a_writel(g, gr_gpccs_dmemc_r(0), (gr_gpccs_dmemc_offs_f(0) |
-					      gr_gpccs_dmemc_blk_f(0)  |
-					      gr_gpccs_dmemc_aincw_f(1)));
-
-	ucode_u32_size = g->gr.ctx_vars.ucode.gpccs.data.count;
-	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.gpccs.data.l;
-
-	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
-		gk20a_writel(g, gr_gpccs_dmemd_r(0), ucode_u32_data[i]);
-		checksum += ucode_u32_data[i];
-	}
-
-	gk20a_writel(g, gr_fecs_dmemc_r(0), (gr_fecs_dmemc_offs_f(0) |
-					     gr_fecs_dmemc_blk_f(0)  |
-					     gr_fecs_dmemc_aincw_f(1)));
-
-	ucode_u32_size = g->gr.ctx_vars.ucode.fecs.data.count;
-	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.fecs.data.l;
-
-	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
-		gk20a_writel(g, gr_fecs_dmemd_r(0), ucode_u32_data[i]);
-		checksum += ucode_u32_data[i];
-	}
-	gk20a_dbg_fn("done");
-}
-
-static void gr_gk20a_load_falcon_imem(struct gk20a *g)
-{
-	u32 cfg, fecs_imem_size, gpccs_imem_size, ucode_u32_size;
-	const u32 *ucode_u32_data;
-	u32 tag, i, pad_start, pad_end;
-	u32 checksum;
-
-	gk20a_dbg_fn("");
-
-	cfg = gk20a_readl(g, gr_fecs_cfg_r());
-	fecs_imem_size = gr_fecs_cfg_imem_sz_v(cfg);
-
-	cfg = gk20a_readl(g, gr_gpc0_cfg_r());
-	gpccs_imem_size = gr_gpc0_cfg_imem_sz_v(cfg);
-
-	/* Use the broadcast address to access all of the GPCCS units. */
-	gk20a_writel(g, gr_gpccs_imemc_r(0), (gr_gpccs_imemc_offs_f(0) |
-					      gr_gpccs_imemc_blk_f(0) |
-					      gr_gpccs_imemc_aincw_f(1)));
-
-	/* Setup the tags for the instruction memory. */
-	tag = 0;
-	gk20a_writel(g, gr_gpccs_imemt_r(0), gr_gpccs_imemt_tag_f(tag));
-
-	ucode_u32_size = g->gr.ctx_vars.ucode.gpccs.inst.count;
-	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.gpccs.inst.l;
-
-	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
-		if (i && ((i % (256/sizeof(u32))) == 0)) {
-			tag++;
-			gk20a_writel(g, gr_gpccs_imemt_r(0),
-				      gr_gpccs_imemt_tag_f(tag));
-		}
-		gk20a_writel(g, gr_gpccs_imemd_r(0), ucode_u32_data[i]);
-		checksum += ucode_u32_data[i];
-	}
-
-	pad_start = i*4;
-	pad_end = pad_start+(256-pad_start%256)+256;
-	for (i = pad_start;
-	     (i < gpccs_imem_size * 256) && (i < pad_end);
-	     i += 4) {
-		if (i && ((i % 256) == 0)) {
-			tag++;
-			gk20a_writel(g, gr_gpccs_imemt_r(0),
-				      gr_gpccs_imemt_tag_f(tag));
-		}
-		gk20a_writel(g, gr_gpccs_imemd_r(0), 0);
-	}
-
-	gk20a_writel(g, gr_fecs_imemc_r(0), (gr_fecs_imemc_offs_f(0) |
-					     gr_fecs_imemc_blk_f(0) |
-					     gr_fecs_imemc_aincw_f(1)));
-
-	/* Setup the tags for the instruction memory. */
-	tag = 0;
-	gk20a_writel(g, gr_fecs_imemt_r(0), gr_fecs_imemt_tag_f(tag));
-
-	ucode_u32_size = g->gr.ctx_vars.ucode.fecs.inst.count;
-	ucode_u32_data = (const u32 *)g->gr.ctx_vars.ucode.fecs.inst.l;
-
-	for (i = 0, checksum = 0; i < ucode_u32_size; i++) {
-		if (i && ((i % (256/sizeof(u32))) == 0)) {
-			tag++;
-			gk20a_writel(g, gr_fecs_imemt_r(0),
-				      gr_fecs_imemt_tag_f(tag));
-		}
-		gk20a_writel(g, gr_fecs_imemd_r(0), ucode_u32_data[i]);
-		checksum += ucode_u32_data[i];
-	}
-
-	pad_start = i*4;
-	pad_end = pad_start+(256-pad_start%256)+256;
-	for (i = pad_start; (i < fecs_imem_size * 256) && i < pad_end; i += 4) {
-		if (i && ((i % 256) == 0)) {
-			tag++;
-			gk20a_writel(g, gr_fecs_imemt_r(0),
-				      gr_fecs_imemt_tag_f(tag));
-		}
-		gk20a_writel(g, gr_fecs_imemd_r(0), 0);
-	}
-}
-
 static int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		u32 expect_delay)
 {
@@ -453,15 +336,18 @@ static int gr_gk20a_ctx_reset(struct gk20a *g, u32 rst_mask)
 static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 				   u32 *mailbox_ret, u32 opc_success,
 				   u32 mailbox_ok, u32 opc_fail,
-				   u32 mailbox_fail)
+				   u32 mailbox_fail, bool sleepduringwait)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
-	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	u32 delay = GR_FECS_POLL_INTERVAL;
 	u32 check = WAIT_UCODE_LOOP;
 	u32 reg;
 
 	gk20a_dbg_fn("");
+
+	if (sleepduringwait)
+		delay = GR_IDLE_CHECK_DEFAULT;
 
 	while (check == WAIT_UCODE_LOOP) {
 		if (!time_before(jiffies, end_jiffies) &&
@@ -536,8 +422,11 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 			break;
 		}
 
-		usleep_range(delay, delay * 2);
-		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+		if (sleepduringwait) {
+			usleep_range(delay, delay * 2);
+			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+		} else
+			udelay(delay);
 	}
 
 	if (check == WAIT_UCODE_TIMEOUT) {
@@ -557,32 +446,9 @@ static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 	return 0;
 }
 
-/* The following is a less brittle way to call gr_gk20a_submit_fecs_method(...)
- * We should replace most, if not all, fecs method calls to this instead. */
-struct fecs_method_op_gk20a {
-	struct {
-		u32 addr;
-		u32 data;
-	} method;
-
-	struct {
-		u32 id;
-		u32 data;
-		u32 clr;
-		u32 *ret;
-		u32 ok;
-		u32 fail;
-	} mailbox;
-
-	struct {
-		u32 ok;
-		u32 fail;
-	} cond;
-
-};
-
 int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
-				   struct fecs_method_op_gk20a op)
+				   struct fecs_method_op_gk20a op,
+				   bool sleepduringwait)
 {
 	struct gr_gk20a *gr = &g->gr;
 	int ret;
@@ -607,7 +473,8 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 
 	ret = gr_gk20a_ctx_wait_ucode(g, op.mailbox.id, op.mailbox.ret,
 				      op.cond.ok, op.mailbox.ok,
-				      op.cond.fail, op.mailbox.fail);
+				      op.cond.fail, op.mailbox.fail,
+				      sleepduringwait);
 
 	mutex_unlock(&gr->fecs_mutex);
 
@@ -625,7 +492,7 @@ int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
 				   .ok   = gr_fecs_ctxsw_mailbox_value_pass_v(),
 				   .fail = gr_fecs_ctxsw_mailbox_value_fail_v(), },
 		      .cond.ok = GR_IS_UCODE_OP_EQUAL,
-		      .cond.fail = GR_IS_UCODE_OP_EQUAL });
+		      .cond.fail = GR_IS_UCODE_OP_EQUAL }, true);
 }
 
 /* Stop processing (stall) context switches at FECS.
@@ -641,7 +508,8 @@ int gr_gk20a_disable_ctxsw(struct gk20a *g)
 int gr_gk20a_enable_ctxsw(struct gk20a *g)
 {
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
-	return gr_gk20a_ctrl_ctxsw(g, gr_fecs_method_push_adr_start_ctxsw_v(), 0);
+	return gr_gk20a_ctrl_ctxsw(g,
+			gr_fecs_method_push_adr_start_ctxsw_v(), NULL);
 }
 
 
@@ -779,7 +647,7 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 				  .ok = 0x10,
 				  .fail = 0x20, },
 		     .cond.ok = GR_IS_UCODE_OP_AND,
-		     .cond.fail = GR_IS_UCODE_OP_AND});
+		     .cond.fail = GR_IS_UCODE_OP_AND}, true);
 	if (ret)
 		gk20a_err(dev_from_gk20a(g),
 			"bind channel instance failed");
@@ -1469,7 +1337,7 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 		},
 		.cond.ok = GR_IS_UCODE_OP_AND,
 		.cond.fail = GR_IS_UCODE_OP_AND,
-		 });
+		 }, true);
 
 	if (ret)
 		gk20a_err(dev_from_gk20a(g), "save context image failed");
@@ -1713,8 +1581,13 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	virt_addr_hi =
 		 u64_hi32(ch_ctx->global_ctx_buffer_va[PRIV_ACCESS_MAP_VA]);
 
+	if (g->allow_all)
+		data = ctxsw_prog_main_image_priv_access_map_config_mode_allow_all_f();
+	else
+		data = ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f();
+
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_config_o(), 0,
-		 ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f());
+		 data);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_addr_lo_o(), 0,
 		 virt_addr_lo);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_addr_hi_o(), 0,
@@ -1747,7 +1620,7 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 					  .ok = gr_fecs_ctxsw_mailbox_value_pass_v(),
 					  .fail = 0},
 				  .cond.ok = GR_IS_UCODE_OP_EQUAL,
-				  .cond.fail = GR_IS_UCODE_OP_SKIP});
+				  .cond.fail = GR_IS_UCODE_OP_SKIP}, false);
 
 		if (ret)
 			gk20a_err(dev_from_gk20a(g),
@@ -1755,22 +1628,6 @@ static int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	}
 
 	return ret;
-}
-
-static void gr_gk20a_start_falcon_ucode(struct gk20a *g)
-{
-	gk20a_dbg_fn("");
-
-	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(0),
-		     gr_fecs_ctxsw_mailbox_clear_value_f(~0));
-
-	gk20a_writel(g, gr_gpccs_dmactl_r(), gr_gpccs_dmactl_require_ctx_f(0));
-	gk20a_writel(g, gr_fecs_dmactl_r(), gr_fecs_dmactl_require_ctx_f(0));
-
-	gk20a_writel(g, gr_gpccs_cpuctl_r(), gr_gpccs_cpuctl_startcpu_f(1));
-	gk20a_writel(g, gr_fecs_cpuctl_r(), gr_fecs_cpuctl_startcpu_f(1));
-
-	gk20a_dbg_fn("done");
 }
 
 static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
@@ -2157,25 +2014,15 @@ static int gr_gk20a_load_ctxsw_ucode(struct gk20a *g, struct gr_gk20a *gr)
 			gr_gpccs_ctxsw_mailbox_value_f(0xc0de7777));
 	}
 
-	/*
-	 * In case the gPMU falcon is not being used, revert to the old way of
-	 * loading gr ucode, without the faster bootstrap routine.
-	 */
-	if (!support_gk20a_pmu()) {
-		gr_gk20a_load_falcon_dmem(g);
-		gr_gk20a_load_falcon_imem(g);
-		gr_gk20a_start_falcon_ucode(g);
-	} else {
-		if (!gr->skip_ucode_init)
-			gr_gk20a_init_ctxsw_ucode(g);
-		gr_gk20a_load_falcon_with_bootloader(g);
-		gr->skip_ucode_init = true;
-	}
+	if (!gr->skip_ucode_init)
+		gr_gk20a_init_ctxsw_ucode(g);
+	gr_gk20a_load_falcon_with_bootloader(g);
+	gr->skip_ucode_init = true;
 
 	ret = gr_gk20a_ctx_wait_ucode(g, 0, 0,
 				      GR_IS_UCODE_OP_EQUAL,
 				      eUcodeHandshakeInitComplete,
-				      GR_IS_UCODE_OP_SKIP, 0);
+				      GR_IS_UCODE_OP_SKIP, 0, false);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g), "falcon ucode init timeout");
 		return ret;
@@ -2211,7 +2058,7 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_fn("");
 	op.method.addr = gr_fecs_method_push_adr_discover_image_size_v();
 	op.mailbox.ret = &golden_ctx_image_size;
-	ret = gr_gk20a_submit_fecs_method_op(g, op);
+	ret = gr_gk20a_submit_fecs_method_op(g, op, false);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g),
 			   "query golden image size failed");
@@ -2219,7 +2066,7 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 	}
 	op.method.addr = gr_fecs_method_push_adr_discover_zcull_image_size_v();
 	op.mailbox.ret = &zcull_ctx_image_size;
-	ret = gr_gk20a_submit_fecs_method_op(g, op);
+	ret = gr_gk20a_submit_fecs_method_op(g, op, false);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g),
 			   "query zcull ctx image size failed");
@@ -2227,7 +2074,7 @@ static int gr_gk20a_init_ctx_state(struct gk20a *g, struct gr_gk20a *gr)
 	}
 	op.method.addr = gr_fecs_method_push_adr_discover_pm_image_size_v();
 	op.mailbox.ret = &pm_ctx_image_size;
-	ret = gr_gk20a_submit_fecs_method_op(g, op);
+	ret = gr_gk20a_submit_fecs_method_op(g, op, false);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g),
 			   "query pm ctx image size failed");
@@ -5014,7 +4861,7 @@ static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
 	bool valid = !(offset & 0xFF000003);
 	/* whitelist check */
 	valid = valid &&
-		is_bar0_global_offset_whitelisted_gk20a(offset);
+		is_bar0_global_offset_whitelisted_gk20a(g, offset);
 	/* resource size check in case there was a problem
 	 * with allocating the assumed size of bar0 */
 	valid = valid &&
@@ -5581,7 +5428,7 @@ int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size)
 			   .cond.ok = GR_IS_UCODE_OP_NOT_EQUAL,
 			   .mailbox.ok = 0,
 			   .cond.fail = GR_IS_UCODE_OP_SKIP,
-			   .mailbox.fail = 0});
+			   .mailbox.fail = 0}, false);
 }
 
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
@@ -5599,7 +5446,7 @@ int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
 			   .cond.ok = GR_IS_UCODE_OP_EQUAL,
 			   .mailbox.ok = 1,
 			   .cond.fail = GR_IS_UCODE_OP_SKIP,
-			   .mailbox.fail = 0});
+			   .mailbox.fail = 0}, false);
 }
 
 int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va)
@@ -5615,7 +5462,7 @@ int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va)
 			   .cond.ok = GR_IS_UCODE_OP_EQUAL,
 			   .mailbox.ok = 1,
 			   .cond.fail = GR_IS_UCODE_OP_SKIP,
-			   .mailbox.fail = 0});
+			   .mailbox.fail = 0}, false);
 }
 
 int gk20a_gr_suspend(struct gk20a *g)
