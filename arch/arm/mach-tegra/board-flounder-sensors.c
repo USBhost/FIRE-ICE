@@ -304,6 +304,7 @@ static int flounder_imx219_power_off(struct imx219_power_rail *pw)
 static struct imx219_platform_data flounder_imx219_pdata = {
 	.power_on = flounder_imx219_power_on,
 	.power_off = flounder_imx219_power_off,
+	.mclk_name = "mclk",
 };
 
 static int flounder_ov9760_power_on(struct ov9760_power_rail *pw)
@@ -394,25 +395,27 @@ static struct tps61310_platform_data flounder_tps61310_pdata = {
 	.pinstate	= &flounder_tps61310_pinstate,
 };
 
-static struct camera_data_blob flounder_camera_lut[] = {
-	{"flounder_imx219_pdata", &flounder_imx219_pdata},
-	{"flounder_drv201_pdata", &flounder_drv201_pdata},
-	{"flounder_tps61310_pdata", &flounder_tps61310_pdata},
-	{"flounder_ov9760_pdata", &flounder_ov9760_pdata},
-	{},
+static struct i2c_board_info flounder_camera_board_info[] = {
+	{
+		I2C_BOARD_INFO("imx219", 0x10),
+		.platform_data = &flounder_imx219_pdata,
+	},
+	{
+		I2C_BOARD_INFO("ov9760", 0x36),
+		.platform_data = &flounder_ov9760_pdata,
+	},
+	{
+		I2C_BOARD_INFO("drv201", 0xe),
+		.platform_data = &flounder_drv201_pdata,
+	},
 };
 
-void __init flounder_camera_auxdata(void *data)
-{
-	struct of_dev_auxdata *aux_lut = data;
-	while (aux_lut && aux_lut->compatible) {
-		if (!strcmp(aux_lut->compatible, "nvidia,tegra124-camera")) {
-			pr_info("%s: update camera lookup table.\n", __func__);
-			aux_lut->platform_data = flounder_camera_lut;
-		}
-		aux_lut++;
-	}
-}
+static struct i2c_board_info flounder_camera_torch_info[] = {
+	{
+		I2C_BOARD_INFO("tps61310", 0x33),
+		.platform_data = &flounder_tps61310_pdata,
+	},
+};
 
 static int flounder_camera_init(void)
 {
@@ -423,6 +426,12 @@ static int flounder_camera_init(void)
 	tegra_io_dpd_enable(&csie_io);
 	tegra_gpio_disable(TEGRA_GPIO_PBB0);
 	tegra_gpio_disable(TEGRA_GPIO_PCC0);
+
+	i2c_register_board_info(2, flounder_camera_board_info,
+		ARRAY_SIZE(flounder_camera_board_info));
+
+	i2c_register_board_info(0, flounder_camera_torch_info,
+		ARRAY_SIZE(flounder_camera_torch_info));
 
 #if IS_ENABLED(CONFIG_SOC_CAMERA_PLATFORM)
 	platform_device_register(&flounder_soc_camera_device);
