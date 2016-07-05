@@ -88,6 +88,7 @@
 
 #include "t124/t124.h"
 #include <media/drv201.h>
+#include <isp.h>
 #include <media/camera.h>
 
 #define DRV201_FOCAL_LENGTH_FLOAT	(3.097f)
@@ -739,6 +740,9 @@ static int drv201_remove(struct i2c_client *client)
 	dev_dbg(info->dev, "%s\n", __func__);
 	misc_deregister(&info->miscdev);
 	drv201_del(info);
+#ifdef TEGRA_12X_OR_HIGHER_CONFIG
+	tegra_isp_unregister_mfi_cb();
+#endif
 	return 0;
 }
 
@@ -832,6 +836,8 @@ static int drv201_probe(
 	}
 
 #ifdef TEGRA_12X_OR_HIGHER_CONFIG
+	camera_dev_sync_init();
+	tegra_isp_register_mfi_cb(camera_dev_sync_cb, NULL);
 	err = camera_dev_add_regmap(&info->csync_dev, "drv201", info->regmap);
 	if (err < 0) {
 		dev_err(info->dev, "%s unable i2c frame sync\n", __func__);
