@@ -671,6 +671,7 @@ device_ioctl(struct file *file,
 		break;
 
 	case IOCTL_GET_STATE:
+		memset(&state, 0, sizeof(state));
 		comm_ctx.control->get_state(&state);
 
 		state.buffer_size = comm_ctx.rb_size;
