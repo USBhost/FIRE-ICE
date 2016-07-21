@@ -103,6 +103,7 @@ struct binder_version {
 #define	BINDER_SET_CONTEXT_MGR		_IOW('b', 7, __s32)
 #define	BINDER_THREAD_EXIT		_IOW('b', 8, __s32)
 #define BINDER_VERSION			_IOWR('b', 9, struct binder_version)
+#define BINDER_PEER_SECURITY_CONTEXT	_IOR('b', 10, struct binder_peer_security_context)
 
 /*
  * NOTE: Two special error codes you should check for when calling
@@ -343,6 +344,12 @@ enum binder_driver_command_protocol {
 	/*
 	 * void *: cookie
 	 */
+};
+
+struct binder_peer_security_context {
+	binder_uintptr_t buf;
+	__u32 len;
+	__aligned_u64 ptr;
 };
 
 #endif /* _UAPI_LINUX_BINDER_H */
