@@ -105,11 +105,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	if (swap_wait == true)
 		other_free += swap_info.freeswap;
 
-	if ((swap_wait == true) && (swap_wait_percent != 00) && 
-	(swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
-		other_free += total_swap_pages;
-	}
-
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
@@ -156,6 +151,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
+			task_unlock(p);
+			continue;
+		}
+		if ((swap_wait == true) && (swap_wait_percent != 00) && 
+		(swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
 			task_unlock(p);
 			continue;
 		}
