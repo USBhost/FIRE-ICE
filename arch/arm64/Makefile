@@ -20,12 +20,10 @@ LIBGCC 		:= $(shell $(CC) $(KBUILD_CFLAGS) -print-libgcc-file-name)
 KBUILD_DEFCONFIG := defconfig
 
 O2_FLAGS := \
-	-ffast-math \
 	-fgraphite-identity \
 	-floop-nest-optimize
 
 O1_FLAGS := \
-	-mcpu=cortex-a57 \
 	-mtune=cortex-a57 \
 	--param l1-cache-line-size=64 \
 	--param l1-cache-size=196 \
