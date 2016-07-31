@@ -20,8 +20,8 @@ LIBGCC 		:= $(shell $(CC) $(KBUILD_CFLAGS) -print-libgcc-file-name)
 KBUILD_DEFCONFIG := defconfig
 
 O2_FLAGS := \
-	-fgraphite-identity \
-	-floop-nest-optimize
+	$(call cc-option, -fgraphite-identity) \
+	$(call cc-option, -floop-nest-optimize)
 
 O1_FLAGS := \
 	-mtune=cortex-a57 \
