@@ -263,7 +263,7 @@ static int virtual_device_sanity_check(
 
 	if (dev_info->bus_type != CAMERA_DEVICE_TYPE_I2C) {
 		dev_err(dev, "%s unsupported device type %d!\n",
-		__func__, dev_info->bus_type);
+			__func__, dev_info->bus_type);
 		return -ENODEV;
 	}
 
@@ -271,14 +271,14 @@ static int virtual_device_sanity_check(
 		dev_info->regmap_cfg.addr_bits != 8 &&
 		dev_info->regmap_cfg.addr_bits != 16) {
 		dev_err(dev, "%s unsupported address bits %d!\n",
-		__func__, dev_info->regmap_cfg.addr_bits);
+			__func__, dev_info->regmap_cfg.addr_bits);
 		return -ENODEV;
 	}
 
 	if (dev_info->regmap_cfg.val_bits != 8 &&
 		dev_info->regmap_cfg.val_bits != 16) {
 		dev_err(dev, "%s unsupported data bits %d!\n",
-		__func__, dev_info->regmap_cfg.val_bits);
+			__func__, dev_info->regmap_cfg.val_bits);
 		return -ENODEV;
 	}
 
@@ -286,13 +286,13 @@ static int virtual_device_sanity_check(
 		dev_info->regmap_cfg.cache_type != REGCACHE_RBTREE &&
 		dev_info->regmap_cfg.cache_type != REGCACHE_COMPRESSED) {
 		dev_err(dev, "%s unsupported cache type %d!\n",
-		__func__, dev_info->regmap_cfg.cache_type);
+			__func__, dev_info->regmap_cfg.cache_type);
 		return -ENODEV;
 	}
 
 	if (dev_info->gpio_num >= ARCH_NR_GPIOS) {
 		dev_err(dev, "%s too many gpios %d!\n",
-		__func__, dev_info->gpio_num);
+			__func__, dev_info->gpio_num);
 		return -ENODEV;
 	}
 
@@ -306,9 +306,16 @@ static int virtual_device_sanity_check(
 			__func__, dev_info->clk_num);
 	}
 
+	if (dev_info->reg_num >= VIRTUAL_DEV_MAX_REGULATORS) {
+		dev_err(dev, "%s too many regulators %u!\n",
+			__func__, dev_info->reg_num);
+		return -ENODEV;
+	}
+
 	*len = 0;
 	num = dev_info->reg_num;
 	nptr = &dev_info->reg_names[0];
+
 	while (num) {
 		n = strlen(nptr);
 		if (!n) {
@@ -324,13 +331,13 @@ static int virtual_device_sanity_check(
 
 	if (dev_info->pwr_on_size > VIRTUAL_DEV_MAX_POWER_SIZE) {
 		dev_err(dev, "%s power on function size too big %d!\n",
-		__func__, dev_info->pwr_on_size);
+			__func__, dev_info->pwr_on_size);
 		return -ENODEV;
 	}
 
 	if (dev_info->pwr_off_size > VIRTUAL_DEV_MAX_POWER_SIZE) {
 		dev_err(dev, "%s power off function size too big %d!\n",
-		__func__, dev_info->pwr_off_size);
+			__func__, dev_info->pwr_off_size);
 		return -ENODEV;
 	}
 
