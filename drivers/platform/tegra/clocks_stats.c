@@ -20,7 +20,7 @@
 #include <linux/seq_file.h>
 #include <linux/list.h>
 
-#include "clock.h"
+#include <linux/platform/tegra/clock.h>
 
 #define STATS_TABLE_MAX_SIZE 64
 

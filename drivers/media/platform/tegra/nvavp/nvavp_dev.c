@@ -1857,6 +1857,8 @@ static int nvavp_pushbuffer_submit_compat_ioctl(struct file *filp,
 {
 	struct nvavp_pushbuffer_submit_hdr_v32 hdr_v32;
 	struct nvavp_pushbuffer_submit_hdr __user *user_hdr;
+	struct nvavp_clientctx *clientctx = filp->private_data;
+	struct nvavp_info *nvavp = clientctx->nvavp;
 	int ret = 0;
 	mutex_lock(&nvavp->submit_lock);
 
