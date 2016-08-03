@@ -6,6 +6,7 @@
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
  *  Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ *  ftrace support Copyright (C) 2013 Sony Mobile Communications AB, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -53,6 +54,7 @@
 #include "sdio_ops.h"
 
 #include "mmc_user_control.h"
+#include <trace/events/mmc.h>
 
 /* If the device is not responding */
 #define MMC_CORE_TIMEOUT_MS	(10 * 60 * 1000) /* 10 minute timeout */
@@ -193,6 +195,10 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 			cmd->resp[0], cmd->resp[1],
 			cmd->resp[2], cmd->resp[3]);
 
+		trace_mmc_req_done( mmc_hostname(host), cmd->opcode, err,
+				cmd->resp[0], cmd->resp[1],
+				cmd->resp[2], cmd->resp[3]);
+
 		if (mrq->data) {
 			pr_debug("%s:     %d bytes transferred: %d\n",
 				mmc_hostname(host),
@@ -235,6 +241,13 @@ mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 	unsigned int i, sz;
 	struct scatterlist *sg;
 #endif
+	unsigned int blksz = 0;
+	unsigned int blocks = 0;
+
+	if (mrq->data) {
+		blksz = mrq->data->blksz;
+		blocks = mrq->data->blocks;
+	}
 
 #ifdef CONFIG_ENABLE_MMC_USER_CONTROL
 	char *data_head;
@@ -259,7 +272,12 @@ mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 		pr_debug("<%s: starting CMD%u arg %08x flags %08x>\n",
 			 mmc_hostname(host), mrq->sbc->opcode,
 			 mrq->sbc->arg, mrq->sbc->flags);
+		trace_mmc_start_req_sbc( mmc_hostname(host), mrq->sbc->opcode,
+				mrq->sbc->arg, mrq->sbc->flags, blksz, blocks);
 	}
+
+	trace_mmc_start_req_cmd( mmc_hostname(host), mrq->cmd->opcode,
+			mrq->cmd->arg, mrq->cmd->flags, blksz, blocks);
 
 	pr_debug("%s: starting CMD%u arg %08x flags %08x\n",
 		 mmc_hostname(host), mrq->cmd->opcode,
@@ -836,8 +854,9 @@ void mmc_set_data_timeout(struct mmc_data *data, const struct mmc_card *card)
 
 	/*
 	 * SD cards use a 100 multiplier rather than 10
+	 * Very poor emmc cards will use a higher value
 	 */
-	mult = mmc_card_sd(card) ? 100 : 10;
+	mult = mmc_card_sd(card) ? 100 : 20;
 
 	/*
 	 * Scale up the multiplier (and therefore the timeout) by

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host client
  *
- * Copyright (c) 2010-2013, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,4 +40,6 @@ int nvhost_client_device_release(struct platform_device *dev);
 
 int nvhost_client_device_get_resources(struct platform_device *dev);
 
+
+int validate_max_size(struct platform_device *ndev, u32 size);
 #endif
