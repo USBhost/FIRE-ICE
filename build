@@ -1,0 +1,18 @@
+
+if [ "$@" == "google" ]; then
+	export ARCH=arm64;
+	export CCOMPILE=$CROSS_COMPILE;
+	export CROSS_COMPILE=aarch64-linux-android-;
+	export LD_LIBRARY_PATH=~/aarch64-linux-android-4.9/lib;
+	export LIBRARY_PATH=~/aarch64-linux-android-4.9/lib;
+	export PATH=$PATH:~/aarch64-linux-android-4.9/bin;
+fi
+
+if [ "$@" == "gnu" ]; then
+	export ARCH=arm64;
+	export CCOMPILE=$CROSS_COMPILE;
+	export CROSS_COMPILE=aarch64-linux-gnu-;
+	export LD_LIBRARY_PATH=~/aarch64-linux-gnu/lib;
+	export LIBRARY_PATH=~/aarch64-linux-gnu/lib;
+	export PATH=$PATH:~/aarch64-linux-gnu/bin;
+fi
