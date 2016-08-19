@@ -280,7 +280,6 @@ struct binder_buffer {
 
 	struct binder_transaction *transaction;
 
-	u32 sender_secid;
 	struct binder_node *target_node;
 	size_t data_size;
 	size_t offsets_size;
@@ -723,8 +722,7 @@ err_no_vma:
 
 static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 					      size_t data_size,
-					      size_t offsets_size, int is_async,
-					      struct binder_proc *sender_proc)
+					      size_t offsets_size, int is_async)
 {
 	struct rb_node *n = proc->free_buffers.rb_node;
 	struct binder_buffer *buffer;
@@ -824,7 +822,6 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 			     "%d: binder_alloc_buf size %zd async free %zd\n",
 			      proc->pid, size, proc->free_async_space);
 	}
-	security_task_getsecid(sender_proc->tsk, &buffer->sender_secid);
 
 	return buffer;
 }
@@ -1561,8 +1558,7 @@ static void binder_transaction(struct binder_proc *proc,
 	trace_binder_transaction(reply, t, target_node);
 
 	t->buffer = binder_alloc_buf(target_proc, tr->data_size,
-		tr->offsets_size, !reply && (t->flags & TF_ONE_WAY),
-		proc);
+		tr->offsets_size, !reply && (t->flags & TF_ONE_WAY));
 	if (t->buffer == NULL) {
 		return_error = BR_FAILED_REPLY;
 		goto err_binder_alloc_buf_failed;
@@ -2810,45 +2806,6 @@ out:
 	return ret;
 }
 
-static int binder_peer_security_context(struct file *filp, unsigned long arg)
-{
-	struct binder_proc *proc = filp->private_data;
-	struct binder_peer_security_context __user *ubuf = (void __user *)arg;
-	struct binder_peer_security_context buf;
-	char __user *uscontext;
-	struct binder_buffer *buffer;
-	char *scontext;
-	u32 scontext_len;
-	int err;
-
-	if (copy_from_user(&buf, ubuf, sizeof(buf)))
-		return -EFAULT;
-
-	buffer = binder_buffer_lookup(proc, buf.buf);
-	if (!buffer)
-		return -EINVAL;
-
-	err = security_secid_to_secctx(buffer->sender_secid, &scontext,
-			&scontext_len);
-	if (err)
-		return err;
-
-	if (scontext_len > buf.len) {
-		err = -ERANGE;
-		goto out_len;
-	}
-
-	uscontext = (char __user *)(uintptr_t)buf.ptr;
-	if (copy_to_user(uscontext, scontext, scontext_len))
-		err = -EFAULT;
-
-out_len:
-	if (put_user(scontext_len, &ubuf->len))
-		err = -EFAULT;
-	kfree(scontext);
-	return err;
-}
-
 static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	int ret;
@@ -2911,11 +2868,6 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	}
-	case BINDER_PEER_SECURITY_CONTEXT:
-		ret = binder_peer_security_context(filp, arg);
-		if (ret)
-			goto err;
-		break;
 	default:
 		ret = -EINVAL;
 		goto err;
@@ -2926,8 +2878,7 @@ err:
 		thread->looper &= ~BINDER_LOOPER_STATE_NEED_RETURN;
 	binder_unlock(__func__);
 	wait_event_interruptible(binder_user_error_wait, binder_stop_on_user_error < 2);
-	if (ret && ret != -ERESTARTSYS &&
-			!(cmd == BINDER_PEER_SECURITY_CONTEXT && ret == -ERANGE))
+	if (ret && ret != -ERESTARTSYS)
 		pr_info("%d:%d ioctl %x %lx returned %d\n", proc->pid, current->pid, cmd, arg, ret);
 err_unlocked:
 	trace_binder_ioctl_done(ret);
