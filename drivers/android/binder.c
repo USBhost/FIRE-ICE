@@ -2821,7 +2821,7 @@ static int binder_peer_security_context(struct file *filp, unsigned long arg)
 	u32 scontext_len;
 	int err;
 
-	if (copy_from_user_preempt_disabled(&buf, ubuf, sizeof(buf)))
+	if (copy_from_user(&buf, ubuf, sizeof(buf)))
 		return -EFAULT;
 
 	buffer = binder_buffer_lookup(proc, buf.buf);
@@ -2839,11 +2839,11 @@ static int binder_peer_security_context(struct file *filp, unsigned long arg)
 	}
 
 	uscontext = (char __user *)(uintptr_t)buf.ptr;
-	if (copy_to_user_preempt_disabled(uscontext, scontext, scontext_len))
+	if (copy_to_user(uscontext, scontext, scontext_len))
 		err = -EFAULT;
 
 out_len:
-	if (put_user_preempt_disabled(scontext_len, &ubuf->len))
+	if (put_user(scontext_len, &ubuf->len))
 		err = -EFAULT;
 	kfree(scontext);
 	return err;
