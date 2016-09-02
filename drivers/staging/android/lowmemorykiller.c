@@ -105,8 +105,9 @@ static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES)
 						- totalreserve_pages;
-	int other_file = global_page_state(NR_FILE_PAGES) -
-						global_page_state(NR_SHMEM)
+	int other_file = global_page_state(NR_FILE_PAGES)
+						- global_page_state(NR_SHMEM)
+						- global_page_state(NR_UNEVICTABLE)
 						- total_swapcache_pages();
 	si_swapinfo(&swap_info);
 	/* basically this is ~50% until killing starts */
