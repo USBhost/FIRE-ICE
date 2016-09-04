@@ -115,6 +115,11 @@ static int te_create_free_cmd_list(struct tlk_device *dev)
 	/* alloc param bitmap allocator */
 	bitmap_size = BITS_TO_LONGS(TE_PARAM_MAX) * sizeof(long);
 	dev->param_bitmap = kzalloc(bitmap_size, GFP_KERNEL);
+	if (dev->param_bitmap == NULL) {
+		pr_err("Failed to allocate param bitmap\n");
+		ret = -ENOMEM;
+		goto error;
+	}
 
 	for (cmd_desc_count = 0;
 		cmd_desc_count < TE_CMD_DESC_MAX; cmd_desc_count++) {
