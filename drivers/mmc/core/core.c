@@ -43,7 +43,6 @@
 #include <linux/mmc/sd.h>
 
 #include <governor.h>
-
 #include <linux/math64.h>
 
 #include "core.h"
