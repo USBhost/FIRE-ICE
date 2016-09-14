@@ -949,7 +949,7 @@ static void maps_stringify(struct nvmap_client *client,
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   (handle->carveout->base);
 			seq_printf(s,
-				"%-18s %-18s %8llx %10zuK %8x %6u %16p "
+				"%-18s %-18s %8llx %10zuK %8x %6u %16pK "
 				"%12s %12s ",
 				"", "",
 				(unsigned long long)base, K(handle->size),
