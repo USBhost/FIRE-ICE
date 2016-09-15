@@ -40,6 +40,7 @@
 #include <linux/swap.h>
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
+#include <linux/nvmap.h>
 
 #define CREATE_TRACE_POINTS
 #include "trace/lowmemorykiller.h"
@@ -64,6 +65,14 @@ static int lowmem_minfree[6] = {
 };
 static int lowmem_minfree_size = 6;
 
+static bool swap_wait = false;
+
+/* 1=0% 2=50% 3=66% 4=75% 5=80% 10=90% 0=100% until killing is allowed */
+static unsigned short swap_wait_percent = 00;
+
+module_param(swap_wait, bool, 0644);
+module_param(swap_wait_percent, short, 0644);
+
 static unsigned long lowmem_deathpending_timeout;
 
 #define lowmem_print(level, x...)			\
@@ -76,6 +85,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
 	struct task_struct *selected = NULL;
+	struct sysinfo swap_info;
 	int rem = 0;
 	int tasksize;
 	int i;
@@ -84,10 +94,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
-	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
+	int other_free = global_page_state(NR_FREE_PAGES)
+						- totalreserve_pages
+						+ nvmap_page_pool_get_unused_pages();
 	int other_file = global_page_state(NR_FILE_PAGES) -
-						global_page_state(NR_SHMEM) -
-						total_swapcache_pages();
+						global_page_state(NR_SHMEM)
+						- total_swapcache_pages();
+	si_swapinfo(&swap_info);
+	/* basically this is ~50% until killing starts */
+	if (swap_wait == true)
+		other_free += swap_info.freeswap;
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
@@ -135,6 +151,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		}
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
+			task_unlock(p);
+			continue;
+		}
+		if ((swap_wait == true) && (swap_wait_percent != 00) && 
+		(swap_info.freeswap > total_swap_pages/swap_wait_percent)) {
 			task_unlock(p);
 			continue;
 		}
