@@ -2088,6 +2088,15 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 	fwu->do_lockdown = DO_LOCKDOWN;
 	fwu->initialized = true;
 
+#ifdef DO_STARTUP_FW_UPDATE
+	wake_lock_init(&fwu->fwu_wake_lock, WAKE_LOCK_SUSPEND, "fwu_wake_lock");
+	fwu->fwu_workqueue = create_singlethread_workqueue("fwu_workqueue");
+	INIT_WORK(&fwu->fwu_work, fwu_startup_fw_update_work);
+	queue_work(fwu->fwu_workqueue,
+			&fwu->fwu_work);
+#endif
+
+
 	retval = sysfs_create_bin_file(&rmi4_data->input_dev->dev.kobj,
 			&dev_attr_data);
 	if (retval < 0) {
@@ -2108,14 +2117,6 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 			goto exit_remove_attrs;
 		}
 	}
-
-#ifdef DO_STARTUP_FW_UPDATE
-	wake_lock_init(&fwu->fwu_wake_lock, WAKE_LOCK_SUSPEND, "fwu_wake_lock");
-	fwu->fwu_workqueue = create_singlethread_workqueue("fwu_workqueue");
-	INIT_WORK(&fwu->fwu_work, fwu_startup_fw_update_work);
-	queue_work(fwu->fwu_workqueue,
-			&fwu->fwu_work);
-#endif
 
 	return 0;
 
