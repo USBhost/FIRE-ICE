@@ -1,5 +1,5 @@
 GCOV_PROFILE := y
-subdir-ccflags-y := -Werror
+subdir-ccflags-y := -Werror -Wno-unused-variable
 EXTRA_CFLAGS += -Idrivers/video/tegra/host
 ccflags-$(CONFIG_ADF_TEGRA) += -Idrivers/video/tegra -Idrivers/staging/android
 obj-y += dc.o bandwidth.o mode.o clock.o lut.o csc.o window.o

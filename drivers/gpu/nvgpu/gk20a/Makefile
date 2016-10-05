@@ -2,7 +2,7 @@
 GCOV_PROFILE := y
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
-ccflags-y += -Werror
+ccflags-y += -Werror -Wno-unused-variable
 
 nvgpu-y := \
 	gk20a.o \
