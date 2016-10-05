@@ -1975,6 +1975,13 @@ static ssize_t fwu_sysfs_config_area_store(struct device *dev,
 static ssize_t fwu_sysfs_image_name_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
+	if (!buf || count > MAX_IMAGE_NAME_LEN) {
+		dev_err(fwu->rmi4_data->pdev->dev.parent,
+				"%s: Failed to copy image file name\n",
+				__func__);
+		return -EINVAL;
+	}
+
 	mutex_lock(&fwu_sysfs_mutex);
 	memcpy(fwu->image_name, buf, count);
 	mutex_unlock(&fwu_sysfs_mutex);
