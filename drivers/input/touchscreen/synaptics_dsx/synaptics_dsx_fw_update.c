@@ -16,6 +16,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
+#include <linux/ctype.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -653,13 +654,11 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 {
 	int retval;
 	enum flash_area flash_area = NONE;
-	unsigned char index = 0;
 	unsigned char config_id[4];
 	unsigned int device_config_id;
 	unsigned int image_config_id;
 	unsigned int device_fw_id;
 	unsigned long image_fw_id;
-	char *strptr;
 	char *firmware_id;
 	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
 
@@ -684,7 +683,9 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 	if (header->contains_firmware_id) {
 		image_fw_id = header->firmware_id;
 	} else {
-		strptr = strstr(fwu->image_name, "PR");
+		size_t index, max_index;
+		unsigned char* strptr = strnstr(fwu->image_name, "PR", MAX_IMAGE_NAME_LEN);
+
 		if (!strptr) {
 			dev_err(rmi4_data->pdev->dev.parent,
 					"%s: No valid PR number (PRxxxxxxx) "
@@ -696,7 +697,10 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 
 		strptr += 2;
 		firmware_id = kzalloc(MAX_FIRMWARE_ID_LEN, GFP_KERNEL);
-		while (strptr[index] >= '0' && strptr[index] <= '9') {
+		max_index = min(MAX_FIRMWARE_ID_LEN - 1,
+				&fwu->image_name[MAX_IMAGE_NAME_LEN] - strptr);
+		index = 0;
+		while (index < max_index && isdigit(strptr[index])) {
 			firmware_id[index] = strptr[index];
 			index++;
 		}
@@ -756,11 +760,6 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 			fwu->config_data[1],
 			fwu->config_data[2],
 			fwu->config_data[3]);
-
-	/*if (image_config_id > device_config_id) {
-		flash_area = CONFIG_AREA;
-		goto exit;
-	}*/
 
 	flash_area = NONE;
 
