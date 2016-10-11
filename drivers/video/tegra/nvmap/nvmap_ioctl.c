@@ -497,10 +497,14 @@ int nvmap_ioctl_get_param(struct file *filp, void __user *arg, bool is32)
 	ref = __nvmap_validate_locked(client, h);
 	if (IS_ERR_OR_NULL(ref)) {
 		err = ref ? PTR_ERR(ref) : -EINVAL;
-		goto ref_fail;
+		goto out;
 	}
 
+	result = 0;
 	err = nvmap_get_handle_param(client, ref, op.param, &result);
+	if (err) {
+		goto out;
+	}
 
 #ifdef CONFIG_COMPAT
 	if (is32)
@@ -509,7 +513,7 @@ int nvmap_ioctl_get_param(struct file *filp, void __user *arg, bool is32)
 #endif
 		err = put_user((unsigned long)result, &uarg->result);
 
-ref_fail:
+out:
 	nvmap_ref_unlock(client);
 	nvmap_handle_put(h);
 	return err;
