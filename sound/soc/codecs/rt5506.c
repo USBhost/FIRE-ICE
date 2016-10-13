@@ -711,17 +711,19 @@ static long rt5506_ioctl(struct file *file, unsigned int cmd,
 	case AMP_SET_MODE:
 		if (copy_from_user(&modeid, argp, sizeof(modeid)))
 			return -EFAULT;
-
+		mutex_lock(&hp_amp_lock);
 		if (!rt5506_cfg_data.cmd_data) {
+			mutex_unlock(&hp_amp_lock);
 			pr_err("%s: out of memory\n", __func__);
 			return -ENOMEM;
 		}
 
 		if (modeid >= rt5506_cfg_data.mode_num || modeid < 0) {
+			mutex_unlock(&hp_amp_lock);
 			pr_err("unsupported rt5506 mode %d\n", modeid);
 			return -EINVAL;
 		}
-		mutex_lock(&hp_amp_lock);
+
 		premode = rt5506_query.curmode;
 		rt5506_query.curmode = modeid;
 		rc = update_amp_parameter(modeid);
