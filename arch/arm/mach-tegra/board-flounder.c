@@ -1007,6 +1007,8 @@ static struct of_dev_auxdata flounder_auxdata_lookup[] __initdata = {
 				NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-xhci", 0x70090000, "tegra-xhci",
 				&xusb_pdata),
+	OF_DEV_AUXDATA("nvidia,tegra124-camera", 0, "pcl-generic",
+				NULL),
 	OF_DEV_AUXDATA("nvidia,tegra124-dfll", 0x70110000, "tegra_cl_dvfs",
 		NULL),
 	OF_DEV_AUXDATA("nvidia,tegra132-dfll", 0x70040084, "tegra_cl_dvfs",
@@ -1426,6 +1428,7 @@ static void __init tegra_flounder_dt_init(void)
 {
 	tegra_flounder_early_init();
 #ifdef CONFIG_USE_OF
+	flounder_camera_auxdata(flounder_auxdata_lookup);
 	of_platform_populate(NULL,
 		of_default_bus_match_table, flounder_auxdata_lookup,
 		&platform_bus);
