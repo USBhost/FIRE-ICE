@@ -230,6 +230,11 @@ set_parameters(struct quadd_parameters *p, uid_t *debug_app_uid)
 
 	ctx.param.nr_pids = p->nr_pids;
 
+	if (p->nr_events > QUADD_MAX_COUNTERS) {
+		pr_err("error: invalid nr_events\n");
+		return -EINVAL;
+	}
+
 	for (i = 0; i < p->nr_events; i++) {
 		int event = p->events[i];
 
