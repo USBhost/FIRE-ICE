@@ -599,7 +599,6 @@ err_nomem:
 int __nvmap_dmabuf_fd(struct nvmap_client *client,
 		      struct dma_buf *dmabuf, int flags)
 {
-	int fd;
 	int start_fd = CONFIG_NVMAP_FD_START;
 
 #ifdef CONFIG_NVMAP_DEFER_FD_RECYCLE
@@ -615,14 +614,8 @@ int __nvmap_dmabuf_fd(struct nvmap_client *client,
 	 * __FD_SETSIZE limitation issue for select(),
 	 * pselect() syscalls.
 	 */
-	fd = __alloc_fd(current->files, start_fd,
-			sysctl_nr_open, flags);
-	if (fd < 0)
-		return fd;
-
-	fd_install(fd, dmabuf->file);
-
-	return fd;
+	return __alloc_fd(current->files, start_fd,
+			  sysctl_nr_open, flags);
 }
 
 int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h)
@@ -634,12 +627,8 @@ int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h)
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
 	fd = __nvmap_dmabuf_fd(client, dmabuf, O_CLOEXEC);
-	if (fd < 0)
-		goto err_out;
-	return fd;
-
-err_out:
-	dma_buf_put(dmabuf);
+	if (IS_ERR_VALUE(fd))
+		dma_buf_put(dmabuf);
 	return fd;
 }
 
@@ -727,14 +716,9 @@ int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
 
 	op.fd = nvmap_get_dmabuf_fd(client, handle);
 	nvmap_handle_put(handle);
-	if (op.fd < 0)
-		return op.fd;
 
-	if (copy_to_user((void __user *)arg, &op, sizeof(op))) {
-		sys_close(op.fd);
-		return -EFAULT;
-	}
-	return 0;
+	return nvmap_install_fd(client, handle, op.fd,
+				arg, &op, sizeof(op), 0);
 }
 
 int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result)
