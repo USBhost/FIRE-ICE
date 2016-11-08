@@ -49,8 +49,12 @@
 #include "hw_therm_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 #include "gr_pri_gk20a.h"
+
 #include "regops_gk20a.h"
+
+#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 #include "dbg_gpu_gk20a.h"
+#endif
 
 #define BLK_SIZE (256)
 
@@ -5278,12 +5282,6 @@ static void gk20a_gr_clear_sm_hww(struct gk20a *g, u32 global_esr)
 			gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f());
 }
 
-static struct channel_gk20a *
-channel_from_hw_chid(struct gk20a *g, u32 hw_chid)
-{
-	return g->fifo.channel+hw_chid;
-}
-
 static int gk20a_gr_handle_sm_exception(struct gk20a *g,
 		struct gr_isr_data *isr_data)
 {
@@ -5299,7 +5297,9 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g,
 			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
 	u32 global_esr, warp_esr;
 	bool sm_debugger_attached = gk20a_gr_sm_debugger_attached(g);
+#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 	struct channel_gk20a *fault_ch;
+#endif
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
@@ -5329,10 +5329,12 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g,
 		}
 	}
 
+#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 	/* finally, signal any client waiting on an event */
-	fault_ch = channel_from_hw_chid(g, isr_data->chid);
+	fault_ch = g->fifo.channel + isr_data->chid;
 	if (fault_ch)
 		gk20a_dbg_gpu_post_events(fault_ch);
+#endif
 
 	return ret;
 }
