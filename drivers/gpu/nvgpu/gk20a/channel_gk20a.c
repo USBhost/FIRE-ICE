@@ -30,9 +30,11 @@
 #include <linux/dma-buf.h>
 
 #include "debug_gk20a.h"
-
 #include "gk20a.h"
+
+#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 #include "dbg_gpu_gk20a.h"
+#endif
 
 #include "hw_ram_gk20a.h"
 #include "hw_fifo_gk20a.h"
@@ -621,7 +623,9 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	struct gr_gk20a *gr = &g->gr;
 	struct vm_gk20a *ch_vm = ch->vm;
 	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
+#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 	struct dbg_session_gk20a *dbg_s;
+#endif
 
 	gk20a_dbg_fn("");
 
@@ -694,10 +698,12 @@ unbind:
 	/* unlink all debug sessions */
 	mutex_lock(&ch->dbg_s_lock);
 
+#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
 		dbg_s->ch = NULL;
 		list_del_init(&dbg_s->dbg_s_list_node);
 	}
+#endif
 
 	mutex_unlock(&ch->dbg_s_lock);
 
