@@ -2068,18 +2068,6 @@ long gk20a_channel_ioctl(struct file *filp,
 				(struct nvhost_alloc_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;
-	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX:
-		err = gk20a_busy(dev);
-		if (err) {
-			dev_err(&dev->dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			return err;
-		}
-		err = gk20a_free_obj_ctx(ch,
-				(struct nvhost_free_obj_ctx_args *)buf);
-		gk20a_idle(dev);
-		break;
 	case NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO:
 		err = gk20a_busy(dev);
 		if (err) {
