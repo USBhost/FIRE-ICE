@@ -585,10 +585,8 @@ static long ov9760_ioctl(struct file *file,
 		err = ov9760_get_status(info, &status);
 		if (err)
 			return err;
-		if (copy_to_user((void __user *)arg, &status,
-				 2)) {
+		if (copy_to_user((void __user *)arg, &status, sizeof(status)))
 			return -EFAULT;
-		}
 		return 0;
 	}
 	case _IOC_NR(OV9760_IOCTL_GET_FUSEID):
