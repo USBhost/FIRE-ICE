@@ -41,7 +41,6 @@
 #include <linux/swap.h>
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
-#include <linux/nvmap.h>
 
 #define CREATE_TRACE_POINTS
 #include "trace/lowmemorykiller.h"
@@ -97,8 +96,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES)
 						- global_page_state(NR_FREE_CMA_PAGES)
-						- totalreserve_pages
-						+ nvmap_page_pool_get_unused_pages();
+						- totalreserve_pages;
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM)
 						- total_swapcache_pages();
