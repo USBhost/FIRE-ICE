@@ -1468,6 +1468,7 @@ struct rt5677_priv {
 	*/
 	struct regmap *regmap;
 	struct mutex index_lock;
+	/* protects vad activities, including model_len and model_buf */
 	struct mutex vad_lock;
 	struct workqueue_struct *check_mic_wq;
 	struct delayed_work check_hp_mic_work;
