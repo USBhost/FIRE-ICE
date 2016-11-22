@@ -648,15 +648,23 @@ static ssize_t syncpt_is_assigned(struct kobject *kobj,
 static ssize_t syncpt_name_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	struct nvhost_master *host = nvhost;
+	struct nvhost_syncpt *sp = &host->syncpt;
+	ssize_t count = 0;
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
 
 	if (syncpt_attr->id < 0)
-		return snprintf(buf, PAGE_SIZE, "\n");
+		return scnprintf(buf, PAGE_SIZE, "\n");
 
-	return snprintf(buf, PAGE_SIZE, "%s\n",
+	mutex_lock(&sp->syncpt_mutex);
+	count = scnprintf(buf, PAGE_SIZE, "%s\n",
 		nvhost_syncpt_get_name(syncpt_attr->host->dev,
 				       syncpt_attr->id));
+	mutex_unlock(&sp->syncpt_mutex);
+
+	return count;
+
 }
 
 static ssize_t syncpt_min_show(struct kobject *kobj,
