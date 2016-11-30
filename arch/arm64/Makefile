@@ -24,7 +24,7 @@ O2_FLAGS := \
 	$(call cc-option, -floop-nest-optimize)
 
 O1_FLAGS := \
-	$(call cc-option, -mtune=cortex-a72, -mtune=cortex-a57) \
+	-mtune=cortex-a57 \
 	--param l1-cache-line-size=64 \
 	--param l1-cache-size=196 \
 	--param l2-cache-size=2097
