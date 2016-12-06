@@ -540,8 +540,7 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 
 	dmabuf = dma_buf_get(args->mem);
 
-	if (ch->error_notifier_ref)
-		gk20a_free_error_notifiers(ch);
+	gk20a_free_error_notifiers(ch);
 
 	if (IS_ERR(dmabuf)) {
 		pr_err("Invalid handle: %d\n", args->mem);
@@ -562,16 +561,23 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		return -ENOMEM;
 	}
 
-	/* set channel notifiers pointer */
-	ch->error_notifier_ref = dmabuf;
 	ch->error_notifier = va + args->offset;
 	ch->error_notifier_va = va;
 	memset(ch->error_notifier, 0, sizeof(struct nvhost_notification));
+
+	/* set channel notifiers pointer */
+	mutex_lock(&ch->error_notifier_mutex);
+	ch->error_notifier_ref = dmabuf;
+	mutex_unlock(&ch->error_notifier_mutex);
+
 	return 0;
 }
 
 void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 {
+	bool notifier_set = false;
+
+	mutex_lock(&ch->error_notifier_mutex);
 	if (ch->error_notifier_ref) {
 		struct timespec time_data;
 		u64 nsec;
@@ -584,20 +590,27 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 				(u32)(nsec >> 32);
 		ch->error_notifier->info32 = error;
 		ch->error_notifier->status = 0xffff;
-		gk20a_err(dev_from_gk20a(ch->g),
-				"error notifier set to %d\n", error);
+
+		notifier_set = true;
 	}
+	mutex_unlock(&ch->error_notifier_mutex);
+
+	if (notifier_set)
+		gk20a_err(dev_from_gk20a(ch->g),
+		    "error notifier set to %d for ch %d", error, ch->hw_chid);
 }
 
 static void gk20a_free_error_notifiers(struct channel_gk20a *ch)
 {
+	mutex_lock(&ch->error_notifier_mutex);
 	if (ch->error_notifier_ref) {
 		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
 		dma_buf_put(ch->error_notifier_ref);
-		ch->error_notifier_ref = 0;
-		ch->error_notifier = 0;
-		ch->error_notifier_va = 0;
+		ch->error_notifier_ref = NULL;
+		ch->error_notifier = NULL;
+		ch->error_notifier_va = NULL;
 	}
+	mutex_unlock(&ch->error_notifier_mutex);
 }
 
 void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
@@ -644,7 +657,7 @@ void gk20a_free_channel(struct channel_gk20a *ch, bool finish)
 	memset(&ch->ramfc, 0, sizeof(struct mem_desc_sub));
 
 	/* free gpfifo */
-	if (ch->gpfifo.gpu_va)
+	if (ch->vm && ch->gpfifo.gpu_va)
 		gk20a_gmmu_unmap(ch_vm, ch->gpfifo.gpu_va,
 			ch->gpfifo.size, gk20a_mem_flag_none);
 	if (ch->gpfifo.cpu_va)
@@ -673,8 +686,9 @@ unbind:
 	channel_gk20a_unbind(ch);
 	channel_gk20a_free_inst(g, ch);
 
-	ch->vpr = false;
+	gk20a_vm_put(ch->vm); /* Don't use VM after this. */
 	ch->vm = NULL;
+	ch->vpr = false;
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */
@@ -1621,6 +1635,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->hw_chid = chid;
 	c->bound = false;
 	c->remove_support = gk20a_remove_channel_support;
+	mutex_init(&c->error_notifier_mutex);
 	mutex_init(&c->jobs_lock);
 	INIT_LIST_HEAD(&c->jobs);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
