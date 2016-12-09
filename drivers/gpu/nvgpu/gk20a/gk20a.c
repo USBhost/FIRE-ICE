@@ -58,11 +58,8 @@
 #include "hw_top_gk20a.h"
 #include "hw_ltc_gk20a.h"
 #include "gk20a_scale.h"
-#include "hal.h"
-
-#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 #include "dbg_gpu_gk20a.h"
-#endif
+#include "hal.h"
 
 #ifdef CONFIG_ARM64
 #define __cpuc_flush_dcache_area __flush_dcache_area
@@ -109,7 +106,6 @@ static const struct file_operations gk20a_ctrl_ops = {
 #endif
 };
 
-#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 static const struct file_operations gk20a_dbg_ops = {
 	.owner = THIS_MODULE,
 	.release        = gk20a_dbg_gpu_dev_release,
@@ -120,7 +116,6 @@ static const struct file_operations gk20a_dbg_ops = {
 	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
 #endif
 };
-#endif
 
 static const struct file_operations gk20a_as_ops = {
 	.owner = THIS_MODULE,
@@ -138,7 +133,6 @@ static const struct file_operations gk20a_as_ops = {
  * code does get too tangled trying to handle each in the same path we can
  * separate them cleanly.
  */
-#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 static const struct file_operations gk20a_prof_ops = {
 	.owner = THIS_MODULE,
 	.release        = gk20a_dbg_gpu_dev_release,
@@ -151,7 +145,6 @@ static const struct file_operations gk20a_prof_ops = {
 	.compat_ioctl = gk20a_dbg_gpu_dev_ioctl,
 #endif
 };
-#endif
 
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
 {
@@ -1110,7 +1103,6 @@ static int gk20a_user_init(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 	err = gk20a_create_device(dev, devno++, "-dbg",
 				  &g->dbg.cdev, &g->dbg.node,
 				  &gk20a_dbg_ops);
@@ -1122,7 +1114,6 @@ static int gk20a_user_init(struct platform_device *dev)
 				  &gk20a_prof_ops);
 	if (err)
 		goto fail;
-#endif
 
 	return 0;
 fail:

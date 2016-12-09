@@ -28,6 +28,7 @@
 #include <linux/nvhost_ioctl.h>
 struct gk20a;
 struct gr_gk20a;
+struct dbg_session_gk20a;
 
 #include "channel_sync_gk20a.h"
 

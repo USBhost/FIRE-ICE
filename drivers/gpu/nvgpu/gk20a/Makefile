@@ -12,6 +12,8 @@ nvgpu-y := \
 	channel_gk20a.o \
 	channel_sync_gk20a.o \
 	debug_gk20a.o \
+	dbg_gpu_gk20a.o \
+	regops_gk20a.o \
 	gr_gk20a.o \
 	kind_gk20a.o \
 	mm_gk20a.o \
@@ -31,8 +33,5 @@ nvgpu-y := \
 	gk20a_allocator.o \
 	platform_gk20a_generic.o
 nvgpu-$(CONFIG_TEGRA_GK20A) += platform_gk20a_tegra.o
-nvgpu-$(CONFIG_TEGRA_GK20A_DEBUG_SESSION) += \
-	dbg_gpu_gk20a.o \
-	regops_gk20a.o \
 
 obj-$(CONFIG_GK20A) := nvgpu.o
