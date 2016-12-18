@@ -104,20 +104,6 @@ static void sa_dbs_timer(struct work_struct *work)
 	mutex_unlock(&core_dbs_info->cdbs.timer_mutex);
 }
 
-static int dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
-		void *data)
-{
-	struct cpufreq_freqs *freq = data;
-	struct sa_cpu_dbs_info_s *dbs_info =
-					&per_cpu(sa_cpu_dbs_info, freq->cpu);
-	struct cpufreq_policy *policy;
-
-	if (dbs_info->enable)
-		policy = dbs_info->cdbs.cur_policy;
-
-	return 0;
-}
-
 /**
  * Set the sampling rate based on the state of the display.
  * The sampling rate is lowered when the display is off and increased when
@@ -337,14 +323,6 @@ static void sa_exit(struct dbs_data *dbs_data)
 
 define_get_cpu_dbs_routines(sa_cpu_dbs_info);
 
-static struct notifier_block sa_cpufreq_notifier_block = {
-	.notifier_call = dbs_cpufreq_notifier,
-};
-
-static struct sa_ops sa_ops = {
-	.notifier_block = &sa_cpufreq_notifier_block,
-};
-
 static struct common_dbs_data sa_dbs_cdata = {
 	.governor = GOV_SUBLIMEACTIVE,
 	.attr_group_gov_sys = &sa_attr_group_gov_sys,
@@ -353,7 +331,7 @@ static struct common_dbs_data sa_dbs_cdata = {
 	.get_cpu_dbs_info_s = get_cpu_dbs_info_s,
 	.gov_dbs_timer = sa_dbs_timer,
 	.gov_check_cpu = sa_check_cpu,
-	.gov_ops = &sa_ops,
+	.gov_ops = NULL,
 	.init = sa_init,
 	.exit = sa_exit,
 };

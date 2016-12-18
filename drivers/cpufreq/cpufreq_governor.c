@@ -305,12 +305,6 @@ int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 			cpufreq_register_notifier(cs_ops->notifier_block,
 					CPUFREQ_TRANSITION_NOTIFIER);
-		} else if ((cdata->governor == GOV_SUBLIMEACTIVE) &&
-				(!policy->governor->initialized)) {
-			struct sa_ops *sa_ops = dbs_data->cdata->gov_ops;
-
-			cpufreq_register_notifier(sa_ops->notifier_block,
-					CPUFREQ_TRANSITION_NOTIFIER);
 		}
 
 		if (!have_governor_per_policy())
@@ -327,12 +321,6 @@ int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				struct cs_ops *cs_ops = dbs_data->cdata->gov_ops;
 
 				cpufreq_unregister_notifier(cs_ops->notifier_block,
-						CPUFREQ_TRANSITION_NOTIFIER);
-			} else if ((dbs_data->cdata->governor == GOV_SUBLIMEACTIVE) &&
-				(policy->governor->initialized == 1)) {
-				struct sa_ops *sa_ops = dbs_data->cdata->gov_ops;
-
-				cpufreq_unregister_notifier(sa_ops->notifier_block,
 						CPUFREQ_TRANSITION_NOTIFIER);
 			}
 
