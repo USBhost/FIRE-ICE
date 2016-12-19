@@ -36,7 +36,6 @@
 #define DEF_INPUT_EVENT_MIN_FREQUENCY        (1428000)
 #define DEF_INPUT_EVENT_DURATION             (50000)
 #define MAX_INPUT_EVENT_DURATION             (200000)
-#define MIN_FREQUENCY_DELTA                  (10000)
 #define MINIMUM_SAMPLING_RATE                (15000)
 
 static DEFINE_PER_CPU(struct sa_cpu_dbs_info_s, sa_cpu_dbs_info);
