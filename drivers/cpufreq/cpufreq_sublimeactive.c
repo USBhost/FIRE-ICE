@@ -25,6 +25,7 @@
 #include <linux/sysfs.h>
 #include <linux/types.h>
 #include <linux/touchboost.h>
+#include <linux/display_state.h>
 
 #include "cpufreq_governor.h"
 
@@ -36,7 +37,8 @@
 #define DEF_INPUT_EVENT_MIN_FREQUENCY        (1428000)
 #define DEF_INPUT_EVENT_DURATION             (50000)
 #define MAX_INPUT_EVENT_DURATION             (200000)
-#define MINIMUM_SAMPLING_RATE                (15000)
+#define DISPLAY_ON_SAMPLING_RATE             (15000)
+#define DISPLAY_OFF_SAMPLING_RATE            (60000)
 
 static DEFINE_PER_CPU(struct sa_cpu_dbs_info_s, sa_cpu_dbs_info);
 
@@ -115,6 +117,53 @@ static int dbs_cpufreq_notifier(struct notifier_block *nb, unsigned long val,
 
 	return 0;
 }
+
+/**
+ * Set the sampling rate based on the state of the display.
+ * The sampling rate is lowered when the display is off and increased when
+ * the display is on.
+ */
+static int display_notifier(struct notifier_block *nb, unsigned long display_state,
+		void *data)
+{
+	unsigned int sampling_rate;
+	unsigned int cpu;
+
+	switch (display_state) {
+		case DISPLAY_ON:
+			sampling_rate = DISPLAY_ON_SAMPLING_RATE;
+			break;
+
+		case DISPLAY_OFF:
+			sampling_rate = DISPLAY_OFF_SAMPLING_RATE;
+			break;
+
+		default:
+			sampling_rate = DISPLAY_ON_SAMPLING_RATE;
+
+#ifdef CONFIG_TEGRA_DSI_DEBUG
+			printk(KERN_WARN "Invalid display state: %u\n", display_state);
+#endif
+	}
+
+#ifdef CONFIG_TEGRA_DSI_DEBUG
+	printk(KERN_INFO "Sampling rate set to %u\n", sampling_rate);
+#endif
+
+	for_each_possible_cpu(cpu) {
+		struct sa_cpu_dbs_info_s* const dbs_info = &per_cpu(sa_cpu_dbs_info, cpu);
+		struct cpufreq_policy* const policy = dbs_info->cdbs.cur_policy;
+		struct dbs_data* const dbs_data = policy->governor_data;
+		struct sa_dbs_tuners* const sa_tuners = dbs_data->tuners;
+		sa_tuners->sampling_rate = sampling_rate;
+    }
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block display_nb = {
+	 .notifier_call = display_notifier,
+};
 
 /************************** sysfs interface ************************/
 static struct common_dbs_data sa_dbs_cdata;
@@ -220,7 +269,7 @@ show_store_one(sa, input_event_min_freq);
 show_store_one(sa, input_event_duration);
 declare_show_sampling_rate_min(sa);
 
-gov_sys_pol_attr_rw(sampling_rate);
+gov_sys_pol_attr_ro(sampling_rate);
 gov_sys_pol_attr_rw(up_threshold);
 gov_sys_pol_attr_rw(down_threshold);
 gov_sys_pol_attr_rw(input_event_min_freq);
@@ -274,13 +323,15 @@ static int sa_init(struct dbs_data *dbs_data)
 	tuners->input_event_duration = DEF_INPUT_EVENT_DURATION;
 
 	dbs_data->tuners = tuners;
-	dbs_data->min_sampling_rate = MINIMUM_SAMPLING_RATE;
+	dbs_data->min_sampling_rate = DISPLAY_ON_SAMPLING_RATE;
 	mutex_init(&dbs_data->mutex);
+	display_state_register_notifier(&display_nb);
 	return 0;
 }
 
 static void sa_exit(struct dbs_data *dbs_data)
 {
+	display_state_unregister_notifier(&display_nb);
 	kfree(dbs_data->tuners);
 }
 
