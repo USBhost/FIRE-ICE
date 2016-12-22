@@ -199,10 +199,7 @@ static ssize_t store_input_event_min_freq(struct dbs_data *dbs_data,
 	if (ret != 1)
 		return -EINVAL;
 
-        /* The input should be at most the lowest maximum frequency set among
-         * all CPUs and at least the greatest minimum frequency of all CPUs
-         */
-	for_each_online_cpu(cpu) {
+	for_each_possible_cpu(cpu) {
 		struct sa_cpu_dbs_info_s* const dbs_info = &per_cpu(sa_cpu_dbs_info, cpu);
 		const struct cpufreq_policy* const policy = dbs_info->cdbs.cur_policy;
 
@@ -211,7 +208,7 @@ static ssize_t store_input_event_min_freq(struct dbs_data *dbs_data,
 
 		else if (input > policy->max)
 			input  = policy->max;
-        }
+	}
 
         sa_tuners->input_event_min_freq = input;
 	return count;
