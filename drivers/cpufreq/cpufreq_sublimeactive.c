@@ -154,21 +154,6 @@ static struct notifier_block display_nb = {
 /************************** sysfs interface ************************/
 static struct common_dbs_data sa_dbs_cdata;
 
-static ssize_t store_sampling_rate(struct dbs_data *dbs_data, const char *buf,
-		size_t count)
-{
-	struct sa_dbs_tuners* const sa_tuners = dbs_data->tuners;
-	unsigned int input;
-	int ret;
-	ret = sscanf(buf, "%u", &input);
-
-	if (ret != 1)
-		return -EINVAL;
-
-	sa_tuners->sampling_rate = max(input, dbs_data->min_sampling_rate);
-	return count;
-}
-
 static ssize_t store_up_threshold(struct dbs_data *dbs_data, const char *buf,
 		size_t count)
 {
@@ -248,7 +233,7 @@ static ssize_t store_input_event_duration(struct dbs_data *dbs_data,
 	return count;
 }
 
-show_store_one(sa, sampling_rate);
+show_one(sa, sampling_rate);
 show_store_one(sa, up_threshold);
 show_store_one(sa, down_threshold);
 show_store_one(sa, input_event_min_freq);
