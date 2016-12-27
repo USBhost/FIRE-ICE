@@ -59,7 +59,7 @@ void dbs_check_cpu(struct dbs_data *dbs_data, int cpu)
 		ignore_nice = od_tuners->ignore_nice_load;
 	} else if (dbs_data->cdata->governor == GOV_SUBLIMEACTIVE) {
 		sampling_rate = sa_tuners->sampling_rate;
-		ignore_nice = 0;
+		ignore_nice = sa_tuners->ignore_nice_load;
 	}  else {
 		sampling_rate = cs_tuners->sampling_rate;
 		ignore_nice = cs_tuners->ignore_nice_load;

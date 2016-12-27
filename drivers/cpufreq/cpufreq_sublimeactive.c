@@ -39,6 +39,8 @@
 #define MAX_INPUT_EVENT_DURATION             (200000)
 #define DISPLAY_ON_SAMPLING_RATE             (15000)
 #define DISPLAY_OFF_SAMPLING_RATE            (60000)
+#define IGNORE_NICE_LOAD_ON                  (1)
+#define IGNORE_NICE_LOAD_OFF                 (0)
 
 static DEFINE_PER_CPU(struct sa_cpu_dbs_info_s, sa_cpu_dbs_info);
 
@@ -113,19 +115,23 @@ static int display_notifier(struct notifier_block *nb, unsigned long display_sta
 		void *data)
 {
 	unsigned int sampling_rate;
+	unsigned int ignore_nice_load;
 	unsigned int cpu;
 
 	switch (display_state) {
 		case DISPLAY_ON:
 			sampling_rate = DISPLAY_ON_SAMPLING_RATE;
+			ignore_nice_load = IGNORE_NICE_LOAD_OFF;
 			break;
 
 		case DISPLAY_OFF:
 			sampling_rate = DISPLAY_OFF_SAMPLING_RATE;
+			ignore_nice_load = IGNORE_NICE_LOAD_ON;
 			break;
 
 		default:
 			sampling_rate = DISPLAY_ON_SAMPLING_RATE;
+			ignore_nice_load = IGNORE_NICE_LOAD_OFF;
 
 #ifdef CONFIG_TEGRA_DSI_DEBUG
 			printk(KERN_WARN "Invalid display state: %u\n", display_state);
@@ -142,8 +148,8 @@ static int display_notifier(struct notifier_block *nb, unsigned long display_sta
 		struct dbs_data* const dbs_data = policy->governor_data;
 		struct sa_dbs_tuners* const sa_tuners = dbs_data->tuners;
 		sa_tuners->sampling_rate = sampling_rate;
-    }
-
+		sa_tuners->ignore_nice_load = ignore_nice_load;
+    	}
 	return NOTIFY_OK;
 }
 
@@ -289,6 +295,7 @@ static int sa_init(struct dbs_data *dbs_data)
 	tuners->down_threshold = DEF_FREQUENCY_DOWN_THRESHOLD;
 	tuners->input_event_min_freq = DEF_INPUT_EVENT_MIN_FREQUENCY;
 	tuners->input_event_duration = DEF_INPUT_EVENT_DURATION;
+	tuners->ignore_nice_load = IGNORE_NICE_LOAD_OFF;
 
 	dbs_data->tuners = tuners;
 	dbs_data->min_sampling_rate = DISPLAY_ON_SAMPLING_RATE;
