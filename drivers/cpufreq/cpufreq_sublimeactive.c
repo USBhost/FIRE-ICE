@@ -30,15 +30,15 @@
 #include "cpufreq_governor.h"
 
 /* Sublime_active governor macros */
-#define DEF_FREQUENCY_UP_THRESHOLD           (75)
-#define DEF_FREQUENCY_DOWN_THRESHOLD         (30)
+#define DEF_FREQUENCY_UP_THRESHOLD           (90)
+#define DEF_FREQUENCY_DOWN_THRESHOLD         (50)
 #define MAXIMUM_LOAD                         (100)
 #define MINIMUM_LOAD                         (11)
 #define DEF_INPUT_EVENT_MIN_FREQUENCY        (1428000)
-#define DEF_INPUT_EVENT_DURATION             (50000)
-#define MAX_INPUT_EVENT_DURATION             (200000)
-#define DISPLAY_ON_SAMPLING_RATE             (15000)
-#define DISPLAY_OFF_SAMPLING_RATE            (60000)
+#define DEF_INPUT_EVENT_DURATION             (500000)
+#define MAX_INPUT_EVENT_DURATION             (2000000)
+#define DISPLAY_ON_SAMPLING_RATE             (120000)
+#define DISPLAY_OFF_SAMPLING_RATE            (600000)
 #define IGNORE_NICE_LOAD_ON                  (1)
 #define IGNORE_NICE_LOAD_OFF                 (0)
 
@@ -54,9 +54,9 @@ static void sa_check_cpu(int cpu, unsigned int load)
 }
 
 /*
- * Every sampling_rate, if current idle time is less than 30% (default),
- * try to increase the frequency. Every sampling_rate if the current idle
- * time is more than 70% (default), try to decrease the frequency.
+ * Every sampling_rate, if current busy time is more than 90% (default),
+ * try to increase the frequency. Every sampling_rate if the current busy
+ * time is less than 50% (default), try to decrease the frequency.
  */
 static void sa_def_check_cpu(int cpu, unsigned int load)
 {
