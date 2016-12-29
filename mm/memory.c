@@ -1889,6 +1889,7 @@ long __get_user_pages(struct task_struct *tsk, struct mm_struct *mm,
 			struct page *page;
 			unsigned int foll_flags = gup_flags;
 			unsigned int page_increm;
+			static DEFINE_MUTEX(s_follow_page_lock);
 
 follow_page_again:
 			/*
@@ -1899,6 +1900,7 @@ follow_page_again:
 				return i ? i : -ERESTARTSYS;
 
 			cond_resched();
+			mutex_lock(&s_follow_page_lock);
 			while (!(page = follow_page_mask(vma, start,
 						foll_flags, &page_mask))) {
 				int ret;
@@ -1908,8 +1910,10 @@ follow_page_again:
 
 				/* For mlock, just skip the stack guard page. */
 				if (foll_flags & FOLL_MLOCK) {
-					if (stack_guard_page(vma, start))
+					if (stack_guard_page(vma, start)) {
+						mutex_unlock(&s_follow_page_lock);
 						goto next_page;
+					}
 				}
 				if (foll_flags & FOLL_WRITE)
 					fault_flags |= FAULT_FLAG_WRITE;
@@ -1922,6 +1926,7 @@ follow_page_again:
 							fault_flags);
 
 				if (ret & VM_FAULT_ERROR) {
+					mutex_unlock(&s_follow_page_lock);
 					if (ret & VM_FAULT_OOM)
 						return i ? i : -ENOMEM;
 					if (ret & (VM_FAULT_HWPOISON |
@@ -1947,6 +1952,7 @@ follow_page_again:
 				}
 
 				if (ret & VM_FAULT_RETRY) {
+					mutex_unlock(&s_follow_page_lock);
 					if (nonblocking)
 						*nonblocking = 0;
 					return i;
@@ -1970,8 +1976,10 @@ follow_page_again:
 
 				cond_resched();
 			}
-			if (IS_ERR(page))
+			if (IS_ERR(page)) {
+				mutex_unlock(&s_follow_page_lock);
 				return i ? i : PTR_ERR(page);
+			}
 
 			if (dma_contiguous_should_replace_page(page) &&
 				(foll_flags & FOLL_GET)) {
@@ -2008,9 +2016,11 @@ follow_page_again:
 						start, fault_flags);
 				}
 				foll_flags = gup_flags;
+				mutex_unlock(&s_follow_page_lock);
 				goto follow_page_again;
 			}
 
+			mutex_unlock(&s_follow_page_lock);
 			BUG_ON(dma_contiguous_should_replace_page(page) &&
 				(foll_flags & FOLL_GET));
 
