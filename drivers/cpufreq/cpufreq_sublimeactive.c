@@ -20,13 +20,13 @@
 #include "cpufreq_governor.h"
 
 /* Sublime_active governor macros */
-#define DEF_FREQ_UP_THRESHOLD		(90)
-#define DEF_FREQ_DOWN_THRESHOLD		(50)
+#define DEF_FREQ_UP_THRESHOLD		(80)
+#define DEF_FREQ_DOWN_THRESHOLD		(40)
 #define DEF_TOUCHBOOST_MIN_FREQ		(1428000)
-#define DEF_TOUCHBOOST_DURATION		(500 * USEC_PER_MSEC)	// 500 ms
+#define DEF_TOUCHBOOST_DURATION		(100 * USEC_PER_MSEC)	// 100 ms
 #define MAX_TOUCHBOOST_DURATION		(2000 * USEC_PER_MSEC)	// 2 sec
-#define DISPLAY_ON_SAMPLING_RATE	(120 * USEC_PER_MSEC)	// 120 ms
-#define DISPLAY_OFF_SAMPLING_RATE	(600 * USEC_PER_MSEC)	// 600 ms
+#define DISPLAY_ON_SAMPLING_RATE	(30 * USEC_PER_MSEC)	// 30 ms
+#define DISPLAY_OFF_SAMPLING_RATE	(500 * USEC_PER_MSEC)	// 500 ms
 #define IGNORE_NICE_LOAD_ON		(1)
 #define IGNORE_NICE_LOAD_OFF		(0)
 #define MAX_LOAD			(100)
@@ -45,10 +45,10 @@ static void sa_check_cpu(int cpu, unsigned int load)
 
 /**
  * This function is designed for efficient frequency scaling at low sampling rates.
- * For example, if the current busy time exceeds 90% (default), the current frequency
+ * For example, if the current busy time exceeds 80% (default), the current frequency
  * will be averaged with the max frequency instead of shooting to the max frequency
  * right away. This helps to make the governor responsive without excessive power use.
- * Likewise if the current busy time is less than 50% (default), the current frequency
+ * Likewise if the current busy time is less than 40% (default), the current frequency
  * will be averaged with the minimum frequency.
  * @ cpu the cpu whose frequency should be set.
  * @ load an int between 0 and 100 that represents how busy the cpu is.
