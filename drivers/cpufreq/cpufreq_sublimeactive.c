@@ -64,7 +64,7 @@ static void sa_def_check_cpu(int cpu, unsigned int load)
 
 	/* Check for frequency decrease */
 	if (load < sa_tuners->down_threshold) {
-		if (input_event_boost(sa_tuners->touchboost_dur)) {
+		if (touchboost_is_enabled(sa_tuners->touchboost_dur)) {
 			freq_target = sa_tuners->touchboost_min_freq;
 			__cpufreq_driver_target(policy, freq_target,
 						CPUFREQ_RELATION_H);

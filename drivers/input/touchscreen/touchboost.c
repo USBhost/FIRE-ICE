@@ -29,24 +29,15 @@ struct touchboost_inputopen {
 	struct work_struct inputopen_work;
 } touchboost_inputopen;
 
-/*
- * Use this variable in your governor of choice to calculate when the cpufreq
- * core is allowed to ramp the cpu down after an input event. That logic is done
- * by you, this var only outputs the last time in us an event was captured
- */
-static u64 last_input_time = 0;
 
-inline u64 get_input_time(void)
-{
-	return last_input_time;
-}
+static u64 last_input_time = 0;
 
 static inline u64 current_time_us(void)
 {
 	return ktime_to_us(ktime_get());
 }
 
-static void boost_input_event(struct input_handle *handle,
+static void touchboost_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
 		if ((type == EV_ABS)) {
@@ -57,13 +48,12 @@ static void boost_input_event(struct input_handle *handle,
 		}
 }
 
-/* Return whether a CPU should be boosted due to touch input */
-inline bool input_event_boost(u64 input_event_duration)
+inline bool touchboost_is_enabled(u64 local_duration)
 {
-        return current_time_us() < (last_input_time + input_event_duration);
+        return current_time_us() < (last_input_time + local_duration);
 }
 
-static int boost_input_connect(struct input_handler *handler,
+static int touchboost_connect(struct input_handler *handler,
                 struct input_dev *dev, const struct input_device_id *id)
 {
 	struct input_handle *handle;
@@ -94,7 +84,7 @@ err:
 	return error;
 }
 
-static void boost_input_disconnect(struct input_handle *handle)
+static void touchboost_disconnect(struct input_handle *handle)
 {
 	input_close_device(handle);
 	input_unregister_handle(handle);
@@ -113,17 +103,17 @@ static const struct input_device_id boost_ids[] = {
 	{ },
 };
 
-static struct input_handler boost_input_handler = {
-	.event          = boost_input_event,
-	.connect        = boost_input_connect,
-	.disconnect     = boost_input_disconnect,
-	.name           = "input-boost",
+static struct input_handler touchboost_handler = {
+	.event          = touchboost_event,
+	.connect        = touchboost_connect,
+	.disconnect     = touchboost_disconnect,
+	.name           = "touchboost",
 	.id_table       = boost_ids,
 };
 
 static int __init init(void)
 {
-	if (input_register_handler(&boost_input_handler))
+	if (input_register_handler(&touchboost_handler))
 		pr_info("Unable to register the input handler\n");
 
 	return 0;

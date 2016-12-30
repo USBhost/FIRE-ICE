@@ -11,7 +11,11 @@
 #ifndef _LINUX_TOUCHBOOST_H
 #define _LINUX_TOUCHBOOST_H
 
-u64 get_input_time(void);
+#include <linux/types.h>
 
-bool input_event_boost(u64 input_event_duration);
+/**
+ * Determines if touchboost is active for a local module.
+ * @local_dur the touchboost duration of a querying module in us.
+ */
+bool touchboost_is_enabled(u64 local_duration);
 #endif
