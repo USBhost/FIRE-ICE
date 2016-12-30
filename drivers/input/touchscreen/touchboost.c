@@ -22,8 +22,6 @@
 #include <linux/slab.h>
 #include <linux/touchboost.h>
 
-#define MIN_TIME_INTERVAL_US (50 * USEC_PER_MSEC)
-
 struct touchboost_inputopen {
 	struct input_handle *handle;
 	struct work_struct inputopen_work;
@@ -40,12 +38,8 @@ static inline u64 current_time_us(void)
 static void touchboost_event(struct input_handle *handle,
 		unsigned int type, unsigned int code, int value)
 {
-		if ((type == EV_ABS)) {
-				u64 now = current_time_us();
-
-				if (now - last_input_time > MIN_TIME_INTERVAL_US)
-						last_input_time = now;
-		}
+	if ((type == EV_ABS))
+		last_input_time = current_time_us();
 }
 
 inline bool touchboost_is_enabled(u64 local_duration)
