@@ -263,18 +263,15 @@ show_store_one(sa, up_threshold);
 show_store_one(sa, down_threshold);
 show_store_one(sa, touchboost_min_freq);
 show_store_one(sa, touchboost_dur);
-declare_show_sampling_rate_min(sa);
 
 gov_sys_pol_attr_ro(sampling_rate);
 gov_sys_pol_attr_rw(up_threshold);
 gov_sys_pol_attr_rw(down_threshold);
 gov_sys_pol_attr_rw(touchboost_min_freq);
 gov_sys_pol_attr_rw(touchboost_dur);
-gov_sys_pol_attr_ro(sampling_rate_min);
 
 static struct attribute *dbs_attributes_gov_sys[] = {
 	&sampling_rate_gov_sys.attr,
-	&sampling_rate_min_gov_sys.attr,
 	&up_threshold_gov_sys.attr,
 	&down_threshold_gov_sys.attr,
 	&touchboost_min_freq_gov_sys.attr,
@@ -288,7 +285,6 @@ static struct attribute_group sa_attr_group_gov_sys = {
 };
 
 static struct attribute *dbs_attributes_gov_pol[] = {
-	&sampling_rate_min_gov_pol.attr,
 	&sampling_rate_gov_pol.attr,
 	&up_threshold_gov_pol.attr,
 	&down_threshold_gov_pol.attr,
