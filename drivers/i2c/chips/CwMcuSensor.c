@@ -2175,7 +2175,7 @@ static ssize_t active_set(struct device *dev, struct device_attribute *attr,
 	if (!mcu_data->probe_success)
 		return -EBUSY;
 
-	if ((sensors_id > CW_SENSORS_ID_TOTAL) ||
+	if ((sensors_id >= CW_SENSORS_ID_TOTAL) ||
 	    (sensors_id < 0)
 	   ) {
 		E("%s: Invalid sensors_id = %ld\n", __func__, sensors_id);
@@ -2466,6 +2466,11 @@ static ssize_t batch_set(struct device *dev,
 		}
 	}
 	kfree(str_buf);
+
+	if ((sensors_id < 0) || (sensors_id >= num_sensors)) {
+		D("%s: Invalid sensors_id = %ld\n", __func__, sensors_id);
+		return -EINVAL;
+	}
 
 	D("%s: sensors_id = 0x%x, flag = %d, delay_ms = %d, timeout = %lld\n",
 	  __func__, sensors_id, flag, delay_ms, timeout);
