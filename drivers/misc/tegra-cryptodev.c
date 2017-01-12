@@ -3,7 +3,7 @@
  *
  * crypto dev node for NVIDIA tegra aes hardware
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -539,6 +539,11 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 	unsigned long *xbuf[XBUFSIZE];
 	int ret = -ENOMEM;
 
+	if (sha_req->plaintext_sz > PAGE_SIZE) {
+		pr_err("alg:hash: invalid plaintext_sz for sha_req\n");
+		return -EINVAL;
+	}
+
 	tfm = crypto_alloc_ahash(sha_req->algo, 0, 0);
 	if (IS_ERR(tfm)) {
 		pr_err("alg:hash:Failed to load transform for %s:%ld\n",
@@ -565,7 +570,15 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 
 	hash_buff = xbuf[0];
 
-	memcpy(hash_buff, sha_req->plaintext, sha_req->plaintext_sz);
+	ret = copy_from_user((void *)hash_buff,
+			     (void __user *)sha_req->plaintext,
+			     sha_req->plaintext_sz);
+	if (ret) {
+		ret = -EFAULT;
+		pr_err("%s: copy_from_user failed (%d)\n", __func__, ret);
+			goto out;
+	}
+
 	sg_init_one(&sg[0], hash_buff, sha_req->plaintext_sz);
 
 	if (sha_req->keylen) {
