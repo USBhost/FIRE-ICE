@@ -298,15 +298,13 @@ static long tfa9895_ioctl(struct file *file, unsigned int cmd,
 	   unsigned long arg)
 {
 	int rc = 0;
-	struct tfa9895_i2c_buffer *buf;
+	unsigned char *buf;
 	void __user *argp = (void __user *)arg;
-	ssize_t buf_size;
 
 	if (_IOC_TYPE(cmd) != TFA9895_IOCTL_MAGIC)
 		return -ENOTTY;
 
-	if ((_IOC_SIZE(cmd) > sizeof(struct tfa9895_i2c_buffer)) ||
-	    (_IOC_SIZE(cmd) < sizeof(buf->size))) /* first element is size */
+	if (_IOC_SIZE(cmd) > sizeof(struct tfa9895_i2c_buffer))
 		return -EINVAL;
 
 	buf = kzalloc(_IOC_SIZE(cmd), GFP_KERNEL);
@@ -324,37 +322,26 @@ static long tfa9895_ioctl(struct file *file, unsigned int cmd,
 		}
 	}
 
-	buf_size = buf->size;
-	if ((buf_size < 0) ||
-	    (buf_size > (_IOC_SIZE(cmd) - sizeof(buf->size)))) {
-		kfree(buf);
-		return -EINVAL;
-	}
-
 	switch (_IOC_NR(cmd)) {
 	case TFA9895_WRITE_CONFIG_NR:
 		pr_debug("%s: TFA9895_WRITE_CONFIG\n", __func__);
-		rc = tfa9895_i2c_write(buf->buffer, buf_size);
+		rc = tfa9895_i2c_write(((struct tfa9895_i2c_buffer *)buf)->buffer, ((struct tfa9895_i2c_buffer *)buf)->size);
 		break;
 	case TFA9895_READ_CONFIG_NR:
 		pr_debug("%s: TFA9895_READ_CONFIG\n", __func__);
-		rc = tfa9895_i2c_read(buf->buffer, buf_size);
+		rc = tfa9895_i2c_read(((struct tfa9895_i2c_buffer *)buf)->buffer, ((struct tfa9895_i2c_buffer *)buf)->size);
 		break;
 	case TFA9895_WRITE_L_CONFIG_NR:
 		pr_debug("%s: TFA9895_WRITE_CONFIG_L\n", __func__);
-		rc = tfa9895_l_write(buf->buffer, buf_size);
+		rc = tfa9895_l_write(((struct tfa9895_i2c_buffer *)buf)->buffer, ((struct tfa9895_i2c_buffer *)buf)->size);
 		break;
 	case TFA9895_READ_L_CONFIG_NR:
 		pr_debug("%s: TFA9895_READ_CONFIG_L\n", __func__);
-		rc = tfa9895_l_read(buf->buffer, buf_size);
+		rc = tfa9895_l_read(((struct tfa9895_i2c_buffer *)buf)->buffer, ((struct tfa9895_i2c_buffer *)buf)->size);
 		break;
 	case TFA9895_ENABLE_DSP_NR:
-		if (buf_size < sizeof(int)) {
-			rc = -EINVAL;
-			break;
-		}
+		pr_info("%s: TFA9895_ENABLE_DSP %d\n", __func__, *(int *)buf);
 		dsp_enabled = *(int *)buf;
-		pr_info("%s: TFA9895_ENABLE_DSP %d\n", __func__, dsp_enabled);
 		break;
 	default:
 		kfree(buf);
