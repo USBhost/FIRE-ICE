@@ -3667,11 +3667,32 @@ dhd_pno_process_anqpo_result(dhd_pub_t *dhd, const void *data, uint32 event, int
 {
 	wl_bss_info_t *bi = (wl_bss_info_t *)data;
 	wifi_gscan_full_result_t *result = NULL;
-	wl_event_gas_t *gas_data = (wl_event_gas_t *)((uint8 *)data +
-		bi->ie_offset + bi->ie_length);
 	uint8 channel;
 	uint32 mem_needed;
 	struct timespec ts;
+	wl_event_gas_t *gas_data;
+
+	if (!bi) {
+		DHD_ERROR(("%s: bi NULL.\n", __FUNCTION__));
+		return NULL;
+	}
+	if ((bi->SSID_len > DOT11_MAX_SSID_LEN) ||
+	    (bi->ie_length > (*size - sizeof(wl_bss_info_t))) ||
+	    (bi->ie_offset < sizeof(wl_bss_info_t)) ||
+	    (bi->ie_offset > (sizeof(wl_bss_info_t) + bi->ie_length))) {
+		DHD_ERROR(("%s: tot:%d,SSID:%d,ie_len:%d,ie_off:%d\n",
+			   __FUNCTION__, *size, bi->SSID_len,
+			   bi->ie_length, bi->ie_offset));
+		return NULL;
+	}
+
+	gas_data = (wl_event_gas_t *)((uint8 *)data + bi->ie_offset + bi->ie_length);
+
+	if (gas_data->data_len > (*size - (bi->ie_offset + bi->ie_length))) {
+		DHD_ERROR(("%s: wrong gas_data_len:%d\n",
+				__FUNCTION__, gas_data->data_len));
+		return NULL;
+	}
 
 	if (event == WLC_E_PFN_NET_FOUND) {
 		mem_needed = OFFSETOF(wifi_gscan_full_result_t, ie_data) + bi->ie_length +
