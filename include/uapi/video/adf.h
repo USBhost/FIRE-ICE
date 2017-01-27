@@ -46,6 +46,15 @@ enum adf_event_type {
 	ADF_EVENT_TYPE_MAX = 255,
 };
 
+enum adf_complete_fence_type {
+	/* no fence */
+	ADF_COMPLETE_FENCE_NONE = 0,
+	/* fence fires when the configuration appears on the screen */
+	ADF_COMPLETE_FENCE_PRESENT = 1,
+	/* fence fires when the configuration leaves the screen */
+	ADF_COMPLETE_FENCE_RELEASE = 2,
+};
+
 /**
  * struct adf_set_event - start or stop subscribing to ADF events
  *

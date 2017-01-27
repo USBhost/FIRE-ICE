@@ -341,6 +341,31 @@ err_pt_create:
 	return ERR_PTR(-ENOSYS);
 }
 
+static struct sync_fence *adf_complete_fence(struct adf_device *dev,
+		struct adf_pending_post *cfg,
+		enum adf_complete_fence_type complete_fence_type)
+{
+	switch (complete_fence_type) {
+	case ADF_COMPLETE_FENCE_NONE:
+		return NULL;
+
+	case ADF_COMPLETE_FENCE_PRESENT:
+		if (dev->ops->present_fence)
+			return dev->ops->present_fence(dev, &cfg->config,
+					cfg->state);
+		return adf_sw_complete_fence(dev, 0);
+
+	case ADF_COMPLETE_FENCE_RELEASE:
+		if (dev->ops->release_fence)
+			return dev->ops->release_fence(dev, &cfg->config,
+					cfg->state);
+		return adf_sw_complete_fence(dev, 1);
+
+	default:
+		BUG();
+	}
+}
+
 /**
  * adf_device_post - flip to a new set of buffers
  *
@@ -351,19 +376,23 @@ err_pt_create:
  * @n_bufs: number of buffers displayed
  * @custom_data: driver-private data
  * @custom_data_size: size of driver-private data
+ * @complete_fence_type: type of fence to return
  *
  * adf_device_post() will copy @intfs, @bufs, and @custom_data, so they may
  * point to variables on the stack.  adf_device_post() also takes its own
  * reference on each of the dma-bufs in @bufs.  The adf_device_post_nocopy()
  * variant transfers ownership of these resources to ADF instead.
  *
- * On success, returns a sync fence which signals when the buffers are removed
- * from the screen.  On failure, returns ERR_PTR(-errno).
+ * On success, returns a sync fence which will fire at the time requested
+ * by @complete_fence_type (or %NULL if none is requested).
+ *
+ * On failure, returns ERR_PTR(-errno).
  */
 struct sync_fence *adf_device_post(struct adf_device *dev,
 		struct adf_interface **intfs, size_t n_intfs,
 		struct adf_buffer *bufs, size_t n_bufs, void *custom_data,
-		size_t custom_data_size)
+		size_t custom_data_size,
+		enum adf_complete_fence_type complete_fence_type)
 {
 	struct adf_interface **intfs_copy = NULL;
 	struct adf_buffer *bufs_copy = NULL;
@@ -398,7 +427,8 @@ struct sync_fence *adf_device_post(struct adf_device *dev,
 	memcpy(custom_data_copy, custom_data, custom_data_size);
 
 	ret = adf_device_post_nocopy(dev, intfs_copy, n_intfs, bufs_copy,
-			n_bufs, custom_data_copy, custom_data_size);
+			n_bufs, custom_data_copy, custom_data_size,
+			complete_fence_type);
 	if (IS_ERR(ret))
 		goto err_post;
 
@@ -438,7 +468,8 @@ EXPORT_SYMBOL(adf_device_post);
 struct sync_fence *adf_device_post_nocopy(struct adf_device *dev,
 		struct adf_interface **intfs, size_t n_intfs,
 		struct adf_buffer *bufs, size_t n_bufs,
-		void *custom_data, size_t custom_data_size)
+		void *custom_data, size_t custom_data_size,
+		enum adf_complete_fence_type complete_fence_type)
 {
 	struct adf_pending_post *cfg;
 	struct adf_buffer_mapping *mappings;
@@ -487,11 +518,7 @@ struct sync_fence *adf_device_post_nocopy(struct adf_device *dev,
 
 	mutex_lock(&dev->post_lock);
 
-	if (dev->ops->release_fence)
-		ret = dev->ops->release_fence(dev, &cfg->config,
-				cfg->state);
-	else
-		ret = adf_sw_complete_fence(dev, 1);
+	ret = adf_complete_fence(dev, cfg, complete_fence_type);
 	if (IS_ERR(ret))
 		goto err_fence;
 
@@ -767,6 +794,7 @@ EXPORT_SYMBOL(adf_interface_simple_buffer_alloc);
  *
  * @intf: interface targeted by the flip
  * @buf: buffer to display
+ * @complete_fence_type: type of fence to return
  *
  * adf_interface_simple_post() can be used generically for simple display
  * configurations, since the client does not need to provide any driver-private
@@ -775,11 +803,14 @@ EXPORT_SYMBOL(adf_interface_simple_buffer_alloc);
  * adf_interface_simple_post() has the same copying semantics as
  * adf_device_post().
  *
- * On success, returns a sync fence which signals when the buffer is removed
- * from the screen.  On failure, returns ERR_PTR(-errno).
+ * On success, returns a sync fence which will fire at the time requested
+ * by @complete_fence_type (or %NULL if none is requested).
+ *
+ * On failure, returns ERR_PTR(-errno).
  */
 struct sync_fence *adf_interface_simple_post(struct adf_interface *intf,
-		struct adf_buffer *buf)
+		struct adf_buffer *buf,
+		enum adf_complete_fence_type complete_fence_type)
 {
 	size_t custom_data_size = 0;
 	void *custom_data = NULL;
@@ -803,7 +834,8 @@ struct sync_fence *adf_interface_simple_post(struct adf_interface *intf,
 	}
 
 	ret = adf_device_post(adf_interface_parent(intf), &intf, 1, buf, 1,
-			custom_data, custom_data_size);
+			custom_data, custom_data_size,
+			complete_fence_type);
 done:
 	kfree(custom_data);
 	return ret;

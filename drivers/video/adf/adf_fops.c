@@ -306,7 +306,8 @@ static int adf_device_post_config(struct adf_device *dev,
 	}
 
 	complete_fence = adf_device_post_nocopy(dev, intfs, data.n_interfaces,
-			bufs, data.n_bufs, custom_data, data.custom_data_size);
+			bufs, data.n_bufs, custom_data, data.custom_data_size,
+			ADF_COMPLETE_FENCE_RELEASE);
 	if (IS_ERR(complete_fence)) {
 		ret = PTR_ERR(complete_fence);
 		goto err_import;
@@ -349,7 +350,8 @@ static int adf_intf_simple_post_config(struct adf_interface *intf,
 		goto err_put_user;
 	}
 
-	complete_fence = adf_interface_simple_post(intf, &buf);
+	complete_fence = adf_interface_simple_post(intf, &buf,
+			ADF_COMPLETE_FENCE_RELEASE);
 	if (IS_ERR(complete_fence)) {
 		ret = PTR_ERR(complete_fence);
 		goto err_put_user;
