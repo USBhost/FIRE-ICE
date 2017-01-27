@@ -311,7 +311,8 @@ done:
 	return ret;
 }
 
-static struct sync_fence *adf_sw_complete_fence(struct adf_device *dev)
+static struct sync_fence *adf_sw_complete_fence(struct adf_device *dev,
+		unsigned int timeline_offset)
 {
 	struct sync_pt *pt;
 	struct sync_fence *complete_fence;
@@ -323,20 +324,20 @@ static struct sync_fence *adf_sw_complete_fence(struct adf_device *dev)
 		dev->timeline_max = 1;
 	}
 
-	dev->timeline_max++;
-	pt = sw_sync_pt_create(dev->timeline, dev->timeline_max);
+	pt = sw_sync_pt_create(dev->timeline, dev->timeline_max +
+			timeline_offset);
 	if (!pt)
 		goto err_pt_create;
 	complete_fence = sync_fence_create(dev->base.name, pt);
 	if (!complete_fence)
 		goto err_fence_create;
 
+	dev->timeline_max++;
 	return complete_fence;
 
 err_fence_create:
 	sync_pt_free(pt);
 err_pt_create:
-	dev->timeline_max--;
 	return ERR_PTR(-ENOSYS);
 }
 
@@ -486,12 +487,11 @@ struct sync_fence *adf_device_post_nocopy(struct adf_device *dev,
 
 	mutex_lock(&dev->post_lock);
 
-	if (dev->ops->complete_fence)
-		ret = dev->ops->complete_fence(dev, &cfg->config,
+	if (dev->ops->release_fence)
+		ret = dev->ops->release_fence(dev, &cfg->config,
 				cfg->state);
 	else
-		ret = adf_sw_complete_fence(dev);
-
+		ret = adf_sw_complete_fence(dev, 1);
 	if (IS_ERR(ret))
 		goto err_fence;
 
