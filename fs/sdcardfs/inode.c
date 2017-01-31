@@ -515,17 +515,6 @@ static int sdcardfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 	if (new_dir != old_dir) {
 		sdcardfs_copy_and_fix_attrs(old_dir, lower_old_dir_dentry->d_inode);
 		fsstack_copy_inode_size(old_dir, lower_old_dir_dentry->d_inode);
-
-		/* update the derived permission of the old_dentry
-		 * with its new parent
-		 */
-		new_parent = dget_parent(new_dentry);
-		if(new_parent) {
-			if(old_dentry->d_inode) {
-				update_derived_permission_lock(old_dentry);
-			}
-			dput(new_parent);
-		}
 	}
 	/* At this point, not all dentry information has been moved, so
 	 * we pass along new_dentry for the name.*/
@@ -751,6 +740,11 @@ static int sdcardfs_setattr(struct vfsmount *mnt, struct dentry *dentry, struct 
 	 * this user can change the lower inode: that should happen when
 	 * calling notify_change on the lower inode.
 	 */
+	/* prepare our own lower struct iattr (with the lower file) */
+	memcpy(&lower_ia, ia, sizeof(lower_ia));
+	/* Allow touch updating timestamps. A previous permission check ensures
+	 * we have write access. Changes to mode, owner, and group are ignored*/
+	ia->ia_valid |= ATTR_FORCE;
 	err = inode_change_ok(&tmp, ia);
 
 	if (!err) {
@@ -776,8 +770,6 @@ static int sdcardfs_setattr(struct vfsmount *mnt, struct dentry *dentry, struct 
 	lower_mnt = lower_path.mnt;
 	lower_inode = sdcardfs_lower_inode(inode);
 
-	/* prepare our own lower struct iattr (with the lower file) */
-	memcpy(&lower_ia, ia, sizeof(lower_ia));
 	if (ia->ia_valid & ATTR_FILE)
 		lower_ia.ia_file = sdcardfs_lower_file(ia->ia_file);
 
