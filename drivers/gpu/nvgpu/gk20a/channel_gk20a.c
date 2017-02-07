@@ -708,9 +708,13 @@ unbind:
 int gk20a_channel_release(struct inode *inode, struct file *filp)
 {
 	struct channel_gk20a *ch = (struct channel_gk20a *)filp->private_data;
-	struct gk20a *g = ch->g;
+	struct gk20a *g;
 	int err;
 
+	if (!ch || !ch->g)
+		return -EFAULT;
+
+	g = ch->g;
 	trace_gk20a_channel_release(dev_name(&g->dev->dev));
 
 	err = gk20a_busy(ch->g->dev);
@@ -2056,18 +2060,6 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_alloc_obj_ctx(ch,
 				(struct nvhost_alloc_obj_ctx_args *)buf);
-		gk20a_idle(dev);
-		break;
-	case NVHOST_IOCTL_CHANNEL_FREE_OBJ_CTX:
-		err = gk20a_busy(dev);
-		if (err) {
-			dev_err(&dev->dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			return err;
-		}
-		err = gk20a_free_obj_ctx(ch,
-				(struct nvhost_free_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;
 	case NVHOST_IOCTL_CHANNEL_ALLOC_GPFIFO:

@@ -151,16 +151,22 @@ int rt5677_ioctl_common(struct snd_hwdep *hw, struct file *file,
 
 	case RT_WRITE_CODEC_DSP_IOCTL:
 	case RT_WRITE_CODEC_DSP_IOCTL_COMPAT:
+		mutex_lock(&rt5677->vad_lock);
 		if (!rt5677->model_buf || rt5677->model_len < size) {
 			vfree(rt5677->model_buf);
 			rt5677->model_len = 0;
 			rt5677->model_buf = vmalloc(size);
-			if (!rt5677->model_buf)
+			if (!rt5677->model_buf) {
+				mutex_unlock(&rt5677->vad_lock);
 				return -ENOMEM;
+			}
 		}
-		if (copy_from_user(rt5677->model_buf, rt_codec.buf, size))
+		if (copy_from_user(rt5677->model_buf, rt_codec.buf, size)) {
+			mutex_unlock(&rt5677->vad_lock);
 			return -EFAULT;
+		}
 		rt5677->model_len = size;
+		mutex_unlock(&rt5677->vad_lock);
 		return 0;
 
 	default:

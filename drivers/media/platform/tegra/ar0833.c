@@ -516,6 +516,7 @@ static int ar0833_get_status(struct ar0833_info *info, u8 *status)
 {
 	int err;
 
+	*status = 0;
 	err = ar0833_read_reg(info->i2c_client, 0x380e, status);
 	return err;
 }
@@ -1152,7 +1153,7 @@ static long ar0833_ioctl(struct file *file,
 		err = ar0833_get_status(info, &status);
 		if (err)
 			break;
-		if (copy_to_user((void __user *)arg, &status, 2)) {
+		if (copy_to_user((void __user *)arg, &status, sizeof(status))) {
 			err = -EFAULT;
 			break;
 		}
