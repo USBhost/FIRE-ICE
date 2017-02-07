@@ -37,6 +37,39 @@ config TOUCHSCREEN_SYNAPTICS_DSX_CORE
 	  To compile this driver as a module, choose M here: the
 	  module will be called synaptics_dsx_core.
 
+config TOUCHSCREEN_SYNAPTICS_DSX_CORE_SYSFS
+	bool "Synaptics DSX core driver sysfs attributes"
+	depends on TOUCHSCREEN_SYNAPTICS_DSX_CORE
+	help
+	  Say Y here to enable basic extra touch reporting sysfs attributes
+	  for debugging or development.  This does not affect the core
+	  sysfs attributes supplied by the platform, or the interactive or
+	  wake_gesture add on attributes.
+
+	  If unsure, say N.
+
+config TOUCHSCREEN_SYNAPTICS_DSX_CORE_INTERACTIVE_SYSFS
+	bool "Synaptics DSX core driver interactive sysfs attributes"
+	depends on TOUCHSCREEN_SYNAPTICS_DSX_CORE
+	default y
+	help
+	  Say Y here to enable interactive sysfs which controls the
+	  power consumption of the touch panel.  This has no effect on
+	  any other core sysfs attribute.
+
+	  If unsure, say Y.
+
+config TOUCHSCREEN_SYNAPTICS_DSX_CORE_WAKE_GESTURE_SYSFS
+	bool "Synaptics DSX core driver wake_gesture sysfs attributes"
+	depends on TOUCHSCREEN_SYNAPTICS_DSX_CORE
+	default y
+	help
+	  Say Y here to enable wake_gesture sysfs which controls
+	  whether double-tap to wake works.  This has no effect on
+	  any other core sysfs attribute.
+
+	  If unsure, say Y.
+
 config TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV
 	tristate "Synaptics DSX RMI device module"
 	depends on TOUCHSCREEN_SYNAPTICS_DSX_CORE
@@ -48,6 +81,17 @@ config TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV
 	  To compile this driver as a module, choose M here: the
 	  module will be called synaptics_dsx_rmi_dev.
 
+config TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
+	bool "Synaptics DSX RMI device sysfs attributes"
+	depends on TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV
+	help
+	  Say Y here to enable support for sysfs attributes for the
+	  direct RMI register access driver interface.  This does not
+	  affect the core or other touch subsystem attributes, only
+	  the rmidev tree.
+
+	  If unsure, say N.
+
 config TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE
 	tristate "Synaptics DSX firmware update module"
 	depends on TOUCHSCREEN_SYNAPTICS_DSX_CORE
@@ -58,6 +102,16 @@ config TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called synaptics_dsx_fw_update.
+
+config TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_SYSFS
+	bool "Synaptics DSX firmware update sysfs attributes"
+	depends on TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE
+	help
+	  Say Y here to enable support for sysfs attributes for
+	  performing firmware update in a development environment.
+	  This does not affect the core or other subsystem attributes.
+
+	  If unsure, say N.
 
 config TOUCHSCREEN_SYNAPTICS_DSX_ACTIVE_PEN
 	tristate "Synaptics DSX active pen module"
@@ -80,6 +134,16 @@ config TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called synaptics_dsx_proximity.
+
+config TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
+	tristate "Synaptics DSX proximity sysfs attributes"
+	depends on TOUCHSCREEN_SYNAPTICS_PROXIMITY
+	help
+	  Say Y here to enable support for proximity sysfs
+	  attribute functionalities.  This does not affect the
+	  core or other touch subsystem attributes.
+
+	  If unsure, say N.
 
 config TOUCHSCREEN_SYNAPTICS_DSX_TEST_REPORTING
 	tristate "Synaptics DSX test reporting module"

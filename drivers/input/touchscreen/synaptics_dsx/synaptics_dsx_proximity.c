@@ -32,6 +32,7 @@
 
 #define HOVERING_FINGER_EN (1 << 4)
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
 static ssize_t synaptics_rmi4_hover_finger_en_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
 
@@ -43,6 +44,7 @@ static struct device_attribute attrs[] = {
 			synaptics_rmi4_hover_finger_en_show,
 			synaptics_rmi4_hover_finger_en_store),
 };
+#endif
 
 struct synaptics_rmi4_f12_query_5 {
 	union {
@@ -387,6 +389,7 @@ f12_found:
 	return 0;
 }
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
 static ssize_t synaptics_rmi4_hover_finger_en_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -427,6 +430,7 @@ static ssize_t synaptics_rmi4_hover_finger_en_store(struct device *dev,
 
 	return count;
 }
+#endif
 
 int synaptics_rmi4_prox_hover_finger_en(bool enable)
 {
@@ -460,7 +464,9 @@ static void synaptics_rmi4_prox_attn(struct synaptics_rmi4_data *rmi4_data,
 static int synaptics_rmi4_prox_init(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval;
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
 	unsigned char attr_count;
+#endif
 
 	prox = kzalloc(sizeof(*prox), GFP_KERNEL);
 	if (!prox) {
@@ -526,6 +532,7 @@ static int synaptics_rmi4_prox_init(struct synaptics_rmi4_data *rmi4_data)
 		goto exit_free_input_device;
 	}
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		retval = sysfs_create_file(&rmi4_data->input_dev->dev.kobj,
 				&attrs[attr_count].attr);
@@ -536,9 +543,11 @@ static int synaptics_rmi4_prox_init(struct synaptics_rmi4_data *rmi4_data)
 			goto exit_free_sysfs;
 		}
 	}
+#endif
 
 	return 0;
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
 exit_free_sysfs:
 	for (attr_count--; attr_count >= 0; attr_count--) {
 		sysfs_remove_file(&rmi4_data->input_dev->dev.kobj,
@@ -547,6 +556,7 @@ exit_free_sysfs:
 
 	input_unregister_device(prox->prox_dev);
 	prox->prox_dev = NULL;
+#endif
 
 exit_free_input_device:
 	if (prox->prox_dev)
@@ -565,15 +575,19 @@ exit:
 
 static void synaptics_rmi4_prox_remove(struct synaptics_rmi4_data *rmi4_data)
 {
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
 	unsigned char attr_count;
+#endif
 
 	if (!prox)
 		goto exit;
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_PROXIMITY_SYSFS
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		sysfs_remove_file(&rmi4_data->input_dev->dev.kobj,
 				&attrs[attr_count].attr);
 	}
+#endif
 
 	input_unregister_device(prox->prox_dev);
 	kfree(prox->finger_data);

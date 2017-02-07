@@ -49,12 +49,8 @@
 #include "hw_therm_gk20a.h"
 #include "hw_pbdma_gk20a.h"
 #include "gr_pri_gk20a.h"
-
 #include "regops_gk20a.h"
-
-#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 #include "dbg_gpu_gk20a.h"
-#endif
 
 #define BLK_SIZE (256)
 
@@ -2689,7 +2685,6 @@ void gk20a_free_channel_ctx(struct channel_gk20a *c)
 
 	memset(&c->ch_ctx, 0, sizeof(struct channel_ctx_gk20a));
 
-	c->num_objects = 0;
 	c->first_init = false;
 }
 
@@ -2840,8 +2835,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		c->first_init = true;
 	}
 
-	c->num_objects++;
-
 	gk20a_dbg_fn("done");
 	return 0;
 out:
@@ -2851,29 +2844,6 @@ out:
 	   they pass, no need to undo. */
 	gk20a_err(dev_from_gk20a(g), "fail");
 	return err;
-}
-
-int gk20a_free_obj_ctx(struct channel_gk20a  *c,
-		       struct nvhost_free_obj_ctx_args *args)
-{
-	unsigned long timeout = gk20a_get_gr_idle_timeout(c->g);
-
-	gk20a_dbg_fn("");
-
-	if (c->num_objects == 0)
-		return 0;
-
-	c->num_objects--;
-
-	if (c->num_objects == 0) {
-		c->first_init = false;
-		gk20a_disable_channel(c,
-			!c->has_timedout,
-			timeout);
-		gr_gk20a_unmap_channel_patch_ctx(c);
-	}
-
-	return 0;
 }
 
 static void gk20a_remove_gr_support(struct gr_gk20a *gr)
@@ -5282,6 +5252,12 @@ static void gk20a_gr_clear_sm_hww(struct gk20a *g, u32 global_esr)
 			gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f());
 }
 
+static struct channel_gk20a *
+channel_from_hw_chid(struct gk20a *g, u32 hw_chid)
+{
+	return g->fifo.channel+hw_chid;
+}
+
 static int gk20a_gr_handle_sm_exception(struct gk20a *g,
 		struct gr_isr_data *isr_data)
 {
@@ -5297,9 +5273,7 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g,
 			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
 	u32 global_esr, warp_esr;
 	bool sm_debugger_attached = gk20a_gr_sm_debugger_attached(g);
-#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 	struct channel_gk20a *fault_ch;
-#endif
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
@@ -5329,12 +5303,10 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g,
 		}
 	}
 
-#if defined(CONFIG_TEGRA_GK20A_DEBUG_SESSION)
 	/* finally, signal any client waiting on an event */
-	fault_ch = g->fifo.channel + isr_data->chid;
+	fault_ch = channel_from_hw_chid(g, isr_data->chid);
 	if (fault_ch)
 		gk20a_dbg_gpu_post_events(fault_ch);
-#endif
 
 	return ret;
 }

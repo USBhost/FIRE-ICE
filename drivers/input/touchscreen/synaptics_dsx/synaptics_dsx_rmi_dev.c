@@ -37,6 +37,8 @@
 #define DEV_NUMBER 1
 #define REG_ADDR_LIMIT 0xFFFF
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
+
 static ssize_t rmidev_sysfs_data_show(struct file *data_file,
 		struct kobject *kobj, struct bin_attribute *attributes,
 		char *buf, loff_t pos, size_t count);
@@ -69,13 +71,17 @@ static ssize_t rmidev_sysfs_intr_mask_show(struct device *dev,
 static ssize_t rmidev_sysfs_intr_mask_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
+#endif
+
 struct rmidev_handle {
 	dev_t dev_no;
 	pid_t pid;
 	unsigned char intr_mask;
 	struct device dev;
 	struct synaptics_rmi4_data *rmi4_data;
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 	struct kobject *sysfs_dir;
+#endif
 	struct siginfo interrupt_signal;
 	struct siginfo terminate_signal;
 	struct task_struct *task;
@@ -91,6 +97,7 @@ struct rmidev_data {
 	struct rmidev_handle *rmi_dev;
 };
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 static struct bin_attribute attr_data = {
 	.attr = {
 		.name = "data",
@@ -121,6 +128,7 @@ static struct device_attribute attrs[] = {
 			rmidev_sysfs_intr_mask_show,
 			rmidev_sysfs_intr_mask_store),
 };
+#endif
 
 static int rmidev_major_num;
 
@@ -130,6 +138,7 @@ static struct rmidev_handle *rmidev;
 
 DECLARE_COMPLETION(rmidev_remove_complete);
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 static irqreturn_t rmidev_sysfs_irq(int irq, void *data)
 {
 	struct synaptics_rmi4_data *rmi4_data = data;
@@ -373,6 +382,7 @@ static ssize_t rmidev_sysfs_intr_mask_store(struct device *dev,
 
 	return count;
 }
+#endif
 
 /*
  * rmidev_llseek - set register address to access for RMI device
@@ -660,7 +670,9 @@ static int rmidev_init_device(struct synaptics_rmi4_data *rmi4_data)
 {
 	int retval;
 	dev_t dev_no;
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 	unsigned char attr_count;
+#endif
 	struct rmidev_data *dev_data;
 	struct device *device_ptr;
 	const struct synaptics_dsx_board_data *bdata =
@@ -766,6 +778,7 @@ static int rmidev_init_device(struct synaptics_rmi4_data *rmi4_data)
 		}
 	}
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 	rmidev->sysfs_dir = kobject_create_and_add(SYSFS_FOLDER_NAME,
 			&rmi4_data->input_dev->dev.kobj);
 	if (!rmidev->sysfs_dir) {
@@ -796,9 +809,11 @@ static int rmidev_init_device(struct synaptics_rmi4_data *rmi4_data)
 			goto err_sysfs_attrs;
 		}
 	}
+#endif
 
 	return 0;
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 err_sysfs_attrs:
 	for (attr_count--; attr_count >= 0; attr_count--)
 		sysfs_remove_file(rmidev->sysfs_dir, &attrs[attr_count].attr);
@@ -809,6 +824,7 @@ err_sysfs_bin:
 	kobject_put(rmidev->sysfs_dir);
 
 err_sysfs_dir:
+#endif
 err_char_device:
 	rmidev_device_cleanup(dev_data);
 	kfree(dev_data);
@@ -829,18 +845,22 @@ err_rmidev:
 
 static void rmidev_remove_device(struct synaptics_rmi4_data *rmi4_data)
 {
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 	unsigned char attr_count;
+#endif
 	struct rmidev_data *dev_data;
 
 	if (!rmidev)
 		goto exit;
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_RMI_DEV_SYSFS
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++)
 		sysfs_remove_file(rmidev->sysfs_dir, &attrs[attr_count].attr);
 
 	sysfs_remove_bin_file(rmidev->sysfs_dir, &attr_data);
 
 	kobject_put(rmidev->sysfs_dir);
+#endif
 
 	dev_data = rmidev->data;
 	if (dev_data) {
