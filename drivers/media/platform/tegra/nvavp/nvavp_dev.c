@@ -2195,9 +2195,16 @@ out:
 
 static int tegra_nvavp_video_release(struct inode *inode, struct file *filp)
 {
-	struct nvavp_clientctx *clientctx = filp->private_data;
-	struct nvavp_info *nvavp = clientctx->nvavp;
+	struct nvavp_clientctx *clientctx;
+	struct nvavp_info *nvavp;
 	int ret = 0;
+
+	clientctx = filp->private_data;
+	if (!clientctx)
+		return ret;
+	nvavp = clientctx->nvavp;
+	if (!nvavp)
+		return ret;
 
 	mutex_lock(&nvavp->open_lock);
 	filp->private_data = NULL;
@@ -2211,9 +2218,16 @@ static int tegra_nvavp_video_release(struct inode *inode, struct file *filp)
 static int tegra_nvavp_audio_release(struct inode *inode,
 					  struct file *filp)
 {
-	struct nvavp_clientctx *clientctx = filp->private_data;
-	struct nvavp_info *nvavp = clientctx->nvavp;
+	struct nvavp_clientctx *clientctx;
+	struct nvavp_info *nvavp;
 	int ret = 0;
+
+	clientctx = filp->private_data;
+	if (!clientctx)
+		return ret;
+	nvavp = clientctx->nvavp;
+	if (!nvavp)
+		return ret;
 
 	mutex_lock(&nvavp->open_lock);
 	filp->private_data = NULL;
@@ -2226,8 +2240,14 @@ static int tegra_nvavp_audio_release(struct inode *inode,
 int tegra_nvavp_audio_client_release(nvavp_clientctx_t client)
 {
 	struct nvavp_clientctx *clientctx = client;
-	struct nvavp_info *nvavp = clientctx->nvavp;
+	struct nvavp_info *nvavp;
 	int ret = 0;
+
+	if (!clientctx)
+		return ret;
+	nvavp = clientctx->nvavp;
+	if (!nvavp)
+		return ret;
 
 	mutex_lock(&nvavp->open_lock);
 	ret = tegra_nvavp_release(clientctx, NVAVP_AUDIO_CHANNEL);
@@ -2270,10 +2290,8 @@ nvavp_channel_open(struct file *filp, struct nvavp_channel_open_args *arg)
 		return err;
 	}
 
-	fd_install(fd, file);
-
-	nonseekable_open(file->f_inode, filp);
 	mutex_lock(&nvavp->open_lock);
+
 	err = tegra_nvavp_open(nvavp,
 		(struct nvavp_clientctx **)&file->private_data,
 		clientctx->channel_id);
@@ -2283,9 +2301,13 @@ nvavp_channel_open(struct file *filp, struct nvavp_channel_open_args *arg)
 		mutex_unlock(&nvavp->open_lock);
 		return err;
 	}
-	mutex_unlock(&nvavp->open_lock);
 
 	arg->channel_fd = fd;
+
+	nonseekable_open(file->f_inode, filp);
+	fd_install(fd, file);
+
+	mutex_unlock(&nvavp->open_lock);
 	return err;
 }
 

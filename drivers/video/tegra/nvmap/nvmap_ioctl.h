@@ -30,6 +30,10 @@ int nvmap_ioctl_pinop(struct file *filp, bool is_pin, void __user *arg,
 
 int nvmap_ioctl_get_param(struct file *filp, void __user *arg, bool is32);
 
+int nvmap_install_fd(struct nvmap_client *client, struct nvmap_handle *handle,
+		     int fd, void __user *arg, void *op, size_t op_size,
+		     bool free);
+
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_alloc(struct file *filp, void __user *arg);

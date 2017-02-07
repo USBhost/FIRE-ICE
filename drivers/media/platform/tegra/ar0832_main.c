@@ -2289,8 +2289,7 @@ static long ar0832_ioctl(struct file *file,
 		err = ar0832_get_status(dev, &status);
 		if (err)
 			return err;
-		if (copy_to_user((void __user *)arg, &status,
-				 2)) {
+		if (copy_to_user((void __user *)arg, &status, sizeof(status))) {
 			dev_err(&i2c_client->dev,
 				"%s: AR0832_IOCTL_GET_STATUS failed\n",
 				__func__);
