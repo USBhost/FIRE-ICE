@@ -455,6 +455,7 @@ misc1:0x%016lx, misc2:0x%016lx\n",
  */
 asmlinkage void bad_mode(struct pt_regs *regs, int reason, unsigned int esr)
 {
+	unsigned long serr_status;
 	console_verbose();
 
 #ifdef CONFIG_DENVER_CPU

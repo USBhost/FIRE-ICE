@@ -64,8 +64,6 @@ static inline int compare_and_exchange(size_t *v, int old, int new)
 	return ret;
 }
 
-static DEFINE_RAW_SPINLOCK(buffer_lock);
-
 /* increase and wrap the start pointer, returning the old value */
 static size_t buffer_start_add(struct persistent_ram_zone *prz, size_t a)
 {
