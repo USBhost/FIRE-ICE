@@ -982,7 +982,7 @@ wl_android_set_roampref(struct net_device *dev, char *command, int total_len)
 	num_ucipher_suites = simple_strtoul(pcmd, NULL, 16);
 	if (num_ucipher_suites > MAX_NUM_SUITES) {
 		WL_ERR(("wrong num_ucipher_suites:%d.\n", num_ucipher_suites));
-		return bcme_error;
+		return BCME_ERROR;
 	}
 	/* Increment for number of cipher suites field + space */
 	pcmd += 3;
