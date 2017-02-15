@@ -282,7 +282,7 @@ void fixup_perms_recursive(struct dentry *dentry, struct limit_search *limit) {
 	} else 	if (descendant_may_need_fixup(info, limit)) {
 		spin_lock(&dentry->d_lock);
 		list_for_each_entry(child, &dentry->d_subdirs, d_child) {
-				fixup_perms_recursive(child, limit);
+			fixup_perms_recursive(child, limit);
 		}
 		spin_unlock(&dentry->d_lock);
 	}
