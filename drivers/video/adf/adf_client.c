@@ -311,10 +311,28 @@ done:
 	return ret;
 }
 
-static struct sync_fence *adf_sw_complete_fence(struct adf_device *dev,
-		unsigned int timeline_offset)
+static struct sync_fence *adf_sync_fence_create(struct adf_device *dev,
+		u32 value)
 {
 	struct sync_pt *pt;
+	struct sync_fence *complete_fence;
+
+	pt = sw_sync_pt_create(dev->timeline, value);
+	if (!pt)
+		return ERR_PTR(-ENOSYS);
+
+	complete_fence = sync_fence_create(dev->base.name, pt);
+	if (!complete_fence) {
+		sync_pt_free(pt);
+		return ERR_PTR(-ENOSYS);
+	}
+
+	return complete_fence;
+}
+
+static struct sync_fence *adf_sw_complete_fence(struct adf_device *dev,
+		enum adf_complete_fence_type complete_fence_type)
+{
 	struct sync_fence *complete_fence;
 
 	if (!dev->timeline) {
@@ -324,24 +342,30 @@ static struct sync_fence *adf_sw_complete_fence(struct adf_device *dev,
 		dev->timeline_max = 1;
 	}
 
-	pt = sw_sync_pt_create(dev->timeline, dev->timeline_max +
-			timeline_offset);
-	if (!pt)
-		goto err_pt_create;
-	complete_fence = sync_fence_create(dev->base.name, pt);
-	if (!complete_fence)
-		goto err_fence_create;
+	switch (complete_fence_type) {
+	case ADF_COMPLETE_FENCE_NONE:
+		complete_fence = NULL;
+		break;
 
-	dev->timeline_max++;
+	case ADF_COMPLETE_FENCE_PRESENT:
+		complete_fence = adf_sync_fence_create(dev, dev->timeline_max);
+		break;
+
+	case ADF_COMPLETE_FENCE_RELEASE:
+		complete_fence = adf_sync_fence_create(dev,
+				dev->timeline_max + 1);
+		break;
+
+	default:
+		BUG();
+	}
+
+	if (!IS_ERR(complete_fence))
+		dev->timeline_max++;
 	return complete_fence;
-
-err_fence_create:
-	sync_pt_free(pt);
-err_pt_create:
-	return ERR_PTR(-ENOSYS);
 }
 
-static struct sync_fence *adf_complete_fence(struct adf_device *dev,
+static struct sync_fence *adf_hw_complete_fence(struct adf_device *dev,
 		struct adf_pending_post *cfg,
 		enum adf_complete_fence_type complete_fence_type)
 {
@@ -350,16 +374,12 @@ static struct sync_fence *adf_complete_fence(struct adf_device *dev,
 		return NULL;
 
 	case ADF_COMPLETE_FENCE_PRESENT:
-		if (dev->ops->present_fence)
-			return dev->ops->present_fence(dev, &cfg->config,
-					cfg->state);
-		return adf_sw_complete_fence(dev, 0);
+		return dev->ops->present_fence(dev, &cfg->config,
+				cfg->state);
 
 	case ADF_COMPLETE_FENCE_RELEASE:
-		if (dev->ops->release_fence)
-			return dev->ops->release_fence(dev, &cfg->config,
-					cfg->state);
-		return adf_sw_complete_fence(dev, 1);
+		return dev->ops->release_fence(dev, &cfg->config,
+				cfg->state);
 
 	default:
 		BUG();
@@ -518,7 +538,10 @@ struct sync_fence *adf_device_post_nocopy(struct adf_device *dev,
 
 	mutex_lock(&dev->post_lock);
 
-	ret = adf_complete_fence(dev, cfg, complete_fence_type);
+	if (dev->ops->advance_timeline)
+		ret = adf_hw_complete_fence(dev, cfg, complete_fence_type);
+	else
+		ret = adf_sw_complete_fence(dev, complete_fence_type);
 	if (IS_ERR(ret))
 		goto err_fence;
 
