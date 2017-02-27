@@ -181,9 +181,11 @@ struct adf_post_config {
  */
 struct adf_post_config_v2 {
 	__u32 n_interfaces;
+	__u32 padding1;
 	__u64 interfaces; /* __u32 * packed into __u64 */
 
 	__u32 n_bufs;
+	__u32 padding2;
 	__u64 bufs; /* struct adf_buffer_config * packed into __u64 */
 
 	__u64 custom_data_size;
@@ -191,6 +193,7 @@ struct adf_post_config_v2 {
 
 	__s32 complete_fence;
 	__u8 complete_fence_type;
+	__u8 padding3[3];
 };
 #define ADF_MAX_INTERFACES (4096 / sizeof(__u32))
 
@@ -255,6 +258,7 @@ struct adf_simple_post_config_v2 {
 	struct adf_buffer_config buf;
 	__s32 complete_fence;
 	__u8 complete_fence_type;
+	__u8 padding[3];
 };
 
 /**
