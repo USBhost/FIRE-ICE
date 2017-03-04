@@ -738,7 +738,8 @@ static void tegra_adf_dev_post(struct adf_device *dev, struct adf_post *cfg,
 }
 
 static struct sync_fence *tegra_adf_dev_complete_fence(struct adf_device *dev,
-		struct adf_post *cfg, void *driver_state)
+		struct adf_post *cfg, void *driver_state,
+		unsigned int timeline_offset)
 {
 	struct tegra_adf_info *adf_info = adf_dev_to_tegra(dev);
 	struct tegra_adf_flip *args = cfg->custom_data;
@@ -767,7 +768,20 @@ static struct sync_fence *tegra_adf_dev_complete_fence(struct adf_device *dev,
 	if (work_index < 0)
 		return ERR_PTR(-EINVAL);
 
-	return tegra_dc_create_fence(adf_info->dc, work_index, syncpt_val + 1);
+	return tegra_dc_create_fence(adf_info->dc, work_index, syncpt_val +
+			timeline_offset);
+}
+
+static struct sync_fence *tegra_adf_dev_present_fence(struct adf_device *dev,
+		struct adf_post *cfg, void *driver_state)
+{
+	return tegra_adf_dev_complete_fence(dev, cfg, driver_state, 0);
+}
+
+static struct sync_fence *tegra_adf_dev_release_fence(struct adf_device *dev,
+		struct adf_post *cfg, void *driver_state)
+{
+	return tegra_adf_dev_complete_fence(dev, cfg, driver_state, 1);
 }
 
 static void tegra_adf_dev_advance_timeline(struct adf_device *dev,
@@ -1149,7 +1163,8 @@ struct adf_device_ops tegra_adf_dev_ops = {
 	},
 	.validate_custom_format = tegra_adf_dev_validate_custom_format,
 	.validate = tegra_adf_dev_validate,
-	.complete_fence = tegra_adf_dev_complete_fence,
+	.present_fence = tegra_adf_dev_present_fence,
+	.release_fence = tegra_adf_dev_release_fence,
 	.post = tegra_adf_dev_post,
 	.advance_timeline = tegra_adf_dev_advance_timeline,
 	.state_free = tegra_adf_dev_state_free,
@@ -1234,12 +1249,11 @@ static void tegra_adf_save_bootloader_logo(struct tegra_adf_info *adf_info,
 	logo.pitch[0] = logo.w * adf_info->fb_data->bits_per_pixel / 8;
 	logo.n_planes = 1;
 
-	fence = adf_interface_simple_post(&adf_info->intf, &logo);
+	fence = adf_interface_simple_post(&adf_info->intf, &logo,
+			ADF_COMPLETE_FENCE_NONE);
 	if (IS_ERR(fence))
 		dev_warn(dev, "failed to post bootloader logo: %ld\n",
 				PTR_ERR(fence));
-	else
-		sync_fence_put(fence);
 
 	dma_buf_put(logo.dma_bufs[0]);
 }

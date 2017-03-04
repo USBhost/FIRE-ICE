@@ -31,7 +31,8 @@ int adf_interface_get_screen_size(struct adf_interface *intf, u16 *width,
 int adf_interface_simple_buffer_alloc(struct adf_interface *intf, u16 w, u16 h,
 		u32 format, struct dma_buf **dma_buf, u32 *offset, u32 *pitch);
 struct sync_fence *adf_interface_simple_post(struct adf_interface *intf,
-		struct adf_buffer *buf);
+		struct adf_buffer *buf,
+		enum adf_complete_fence_type complete_fence_type);
 
 bool adf_overlay_engine_supports_format(struct adf_overlay_engine *eng,
 		u32 format);
@@ -52,10 +53,12 @@ int adf_device_detach(struct adf_device *dev, struct adf_overlay_engine *eng,
 struct sync_fence *adf_device_post(struct adf_device *dev,
 		struct adf_interface **intfs, size_t n_intfs,
 		struct adf_buffer *bufs, size_t n_bufs, void *custom_data,
-		size_t custom_data_size);
+		size_t custom_data_size,
+		enum adf_complete_fence_type complete_fence_type);
 struct sync_fence *adf_device_post_nocopy(struct adf_device *dev,
 		struct adf_interface **intfs, size_t n_intfs,
 		struct adf_buffer *bufs, size_t n_bufs, void *custom_data,
-		size_t custom_data_size);
+		size_t custom_data_size,
+		enum adf_complete_fence_type complete_fence_type);
 
 #endif /* _VIDEO_ADF_CLIENT_H_ */
