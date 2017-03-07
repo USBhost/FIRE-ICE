@@ -2662,7 +2662,7 @@ static int binder_thread_write(struct binder_proc *proc,
 			if (get_user_preempt_disabled(cookie, (binder_uintptr_t __user *)ptr))
 				return -EFAULT;
 
-			ptr += sizeof(void *);
+			ptr += sizeof(cookie);
 			list_for_each_entry(w, &proc->delivered_death, entry) {
 				struct binder_ref_death *tmp_death = container_of(w, struct binder_ref_death, work);
 
@@ -3440,7 +3440,7 @@ static int binder_mmap(struct file *filp, struct vm_area_struct *vma)
 	const char *failure_string;
 	struct binder_buffer *buffer;
 
-	if (proc->tsk != current)
+	if (proc->tsk != current->group_leader)
 		return -EINVAL;
 
 	if ((vma->vm_end - vma->vm_start) > SZ_4M)
@@ -3546,8 +3546,8 @@ static int binder_open(struct inode *nodp, struct file *filp)
 	proc = kzalloc(sizeof(*proc), GFP_KERNEL);
 	if (proc == NULL)
 		return -ENOMEM;
-	get_task_struct(current);
-	proc->tsk = current;
+	get_task_struct(current->group_leader);
+	proc->tsk = current->group_leader;
 	INIT_LIST_HEAD(&proc->todo);
 	init_waitqueue_head(&proc->wait);
 	proc->default_priority = task_nice(current);
