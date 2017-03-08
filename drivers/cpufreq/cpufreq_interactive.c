@@ -322,18 +322,18 @@ static u64 update_load(int cpu)
 	u64 now;
 	u64 now_idle;
 	u64 now_iowait;
-	unsigned int delta_idle;
+	u64 delta_idle;
 	unsigned int delta_iowait;
-	unsigned int delta_time;
+	u64 delta_time;
 	unsigned int io_consecutive;
 	u64 active_time;
 
 
 	now_idle = get_cpu_idle_time(cpu, &now, tunables->io_is_busy);
 	now_iowait = get_cpu_iowait_time_us(cpu, NULL);
-	delta_idle = (unsigned int)(now_idle - pcpu->time_in_idle);
+	delta_idle = (now_idle - pcpu->time_in_idle);
 	delta_iowait = (unsigned int)(now_iowait - pcpu->time_in_iowait);
-	delta_time = (unsigned int)(now - pcpu->time_in_idle_timestamp);
+	delta_time = (now - pcpu->time_in_idle_timestamp);
 	io_consecutive = pcpu->io_consecutive;
 
 	if (!tunables->io_is_busy) {
