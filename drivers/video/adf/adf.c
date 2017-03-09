@@ -529,15 +529,17 @@ int adf_device_init(struct adf_device *dev, struct device *parent,
 		return -EINVAL;
 	}
 
-	if (!ops->complete_fence && !ops->advance_timeline) {
+	if (!ops->release_fence && !ops->present_fence &&
+			!ops->advance_timeline) {
 		if (!IS_ENABLED(CONFIG_SW_SYNC)) {
 			pr_err("%s: device requires sw_sync but it is not enabled in the kernel\n",
 					__func__);
 			return -EINVAL;
 		}
-	} else if (!(ops->complete_fence && ops->advance_timeline)) {
-		pr_err("%s: device must implement both complete_fence and advance_timeline, or implement neither\n",
-				__func__);
+	} else if (!(ops->release_fence && ops->present_fence &&
+			ops->advance_timeline)) {
+		pr_err("%s: device cannot partially implement hardware fences\n",
+						__func__);
 		return -EINVAL;
 	}
 

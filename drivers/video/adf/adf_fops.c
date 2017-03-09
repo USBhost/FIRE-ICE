@@ -34,6 +34,16 @@
 #include "adf_fops32.h"
 #endif
 
+static inline void __user *u64_to_user_ptr(__u64 p)
+{
+	return (void __user *)(uintptr_t)p;
+}
+
+static inline u64 user_ptr_to_u64(void __user *p)
+{
+	return (uintptr_t)p;
+}
+
 static int adf_obj_set_event(struct adf_obj *obj, struct adf_file *file,
 		struct adf_set_event __user *arg)
 {
@@ -154,6 +164,30 @@ done:
 	return ret;
 }
 
+static int adf_get_complete_fence_fd(u8 complete_fence_type, int *fence_fd)
+{
+	int fd;
+
+	switch (complete_fence_type) {
+	case ADF_COMPLETE_FENCE_NONE:
+		fd = -1;
+		break;
+
+	case ADF_COMPLETE_FENCE_PRESENT:
+	case ADF_COMPLETE_FENCE_RELEASE:
+		fd = get_unused_fd();
+		if (fd < 0)
+			return fd;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	*fence_fd = fd;
+	return 0;
+}
+
 static int adf_buffer_import(struct adf_device *dev,
 		struct adf_buffer_config __user *cfg, struct adf_buffer *buf)
 {
@@ -214,41 +248,39 @@ done:
 }
 
 static int adf_device_post_config(struct adf_device *dev,
-		struct adf_post_config __user *arg)
+		struct adf_post_config_v2 *data,
+		__s32 __user *complete_fence_user)
 {
 	struct sync_fence *complete_fence;
 	int complete_fence_fd;
 	struct adf_buffer *bufs = NULL;
 	struct adf_interface **intfs = NULL;
-	struct adf_post_config data;
 	size_t i;
 	void *custom_data = NULL;
 	int ret = 0;
 
-	if (copy_from_user(&data, arg, sizeof(data)))
-		return -EFAULT;
+	ret = adf_get_complete_fence_fd(data->complete_fence_type,
+			&complete_fence_fd);
+	if (ret < 0)
+		return ret;
 
-	complete_fence_fd = get_unused_fd();
-	if (complete_fence_fd < 0)
-		return complete_fence_fd;
-
-	if (data.n_interfaces > ADF_MAX_INTERFACES) {
+	if (data->n_interfaces > ADF_MAX_INTERFACES) {
 		ret = -EINVAL;
 		goto err_get_user;
 	}
 
-	if (data.n_bufs > ADF_MAX_BUFFERS) {
+	if (data->n_bufs > ADF_MAX_BUFFERS) {
 		ret = -EINVAL;
 		goto err_get_user;
 	}
 
-	if (data.custom_data_size > ADF_MAX_CUSTOM_DATA_SIZE) {
+	if (data->custom_data_size > ADF_MAX_CUSTOM_DATA_SIZE) {
 		ret = -EINVAL;
 		goto err_get_user;
 	}
 
-	if (data.n_interfaces) {
-		intfs = kmalloc(sizeof(intfs[0]) * data.n_interfaces,
+	if (data->n_interfaces) {
+		intfs = kmalloc(sizeof(intfs[0]) * data->n_interfaces,
 			GFP_KERNEL);
 		if (!intfs) {
 			ret = -ENOMEM;
@@ -256,9 +288,11 @@ static int adf_device_post_config(struct adf_device *dev,
 		}
 	}
 
-	for (i = 0; i < data.n_interfaces; i++) {
+	for (i = 0; i < data->n_interfaces; i++) {
+		__u32 __user *interfaces_user =
+				u64_to_user_ptr(data->interfaces);
 		u32 intf_id;
-		if (get_user(intf_id, &data.interfaces[i])) {
+		if (get_user(intf_id, &interfaces_user[i])) {
 			ret = -EFAULT;
 			goto err_get_user;
 		}
@@ -270,65 +304,105 @@ static int adf_device_post_config(struct adf_device *dev,
 		}
 	}
 
-	if (data.n_bufs) {
-		bufs = kzalloc(sizeof(bufs[0]) * data.n_bufs, GFP_KERNEL);
+	if (data->n_bufs) {
+		bufs = kzalloc(sizeof(bufs[0]) * data->n_bufs, GFP_KERNEL);
 		if (!bufs) {
 			ret = -ENOMEM;
 			goto err_get_user;
 		}
 	}
 
-	for (i = 0; i < data.n_bufs; i++) {
-		ret = adf_buffer_import(dev, &data.bufs[i], &bufs[i]);
+	for (i = 0; i < data->n_bufs; i++) {
+		struct adf_buffer_config __user *bufs_user =
+				u64_to_user_ptr(data->bufs);
+		ret = adf_buffer_import(dev, &bufs_user[i], &bufs[i]);
 		if (ret < 0) {
 			memset(&bufs[i], 0, sizeof(bufs[i]));
 			goto err_import;
 		}
 	}
 
-	if (data.custom_data_size) {
-		custom_data = kzalloc(data.custom_data_size, GFP_KERNEL);
+	if (data->custom_data_size) {
+		void __user *custom_data_user =
+				u64_to_user_ptr(data->custom_data);
+		custom_data = kzalloc(data->custom_data_size, GFP_KERNEL);
 		if (!custom_data) {
 			ret = -ENOMEM;
 			goto err_import;
 		}
 
-		if (copy_from_user(custom_data, data.custom_data,
-				data.custom_data_size)) {
+		if (copy_from_user(custom_data, custom_data_user,
+				data->custom_data_size)) {
 			ret = -EFAULT;
 			goto err_import;
 		}
 	}
 
-	if (put_user(complete_fence_fd, &arg->complete_fence)) {
+	if (put_user(complete_fence_fd, complete_fence_user)) {
 		ret = -EFAULT;
 		goto err_import;
 	}
 
-	complete_fence = adf_device_post_nocopy(dev, intfs, data.n_interfaces,
-			bufs, data.n_bufs, custom_data, data.custom_data_size);
+	complete_fence = adf_device_post_nocopy(dev, intfs, data->n_interfaces,
+			bufs, data->n_bufs, custom_data, data->custom_data_size,
+			data->complete_fence_type);
 	if (IS_ERR(complete_fence)) {
 		ret = PTR_ERR(complete_fence);
 		goto err_import;
 	}
 
-	sync_fence_install(complete_fence, complete_fence_fd);
+	if (complete_fence_fd >= 0)
+		sync_fence_install(complete_fence, complete_fence_fd);
 	return 0;
 
 err_import:
-	for (i = 0; i < data.n_bufs; i++)
+	for (i = 0; i < data->n_bufs; i++)
 		adf_buffer_cleanup(&bufs[i]);
 
 err_get_user:
 	kfree(custom_data);
 	kfree(bufs);
 	kfree(intfs);
-	put_unused_fd(complete_fence_fd);
+	if (complete_fence_fd >= 0)
+		put_unused_fd(complete_fence_fd);
 	return ret;
 }
 
+static int adf_device_post_config_v1(struct adf_device *dev,
+		struct adf_post_config __user *arg)
+{
+	struct adf_post_config data;
+	struct adf_post_config_v2 data_v2;
+
+	if (copy_from_user(&data, arg, sizeof(data)))
+		return -EFAULT;
+
+	data_v2.n_interfaces = data.n_interfaces;
+	data_v2.interfaces = user_ptr_to_u64(data.interfaces);
+	data_v2.n_bufs = data.n_bufs;
+	data_v2.bufs = user_ptr_to_u64(data.bufs);
+	data_v2.custom_data_size = data.custom_data_size;
+	data_v2.custom_data = user_ptr_to_u64(data.custom_data);
+	data_v2.complete_fence_type = ADF_COMPLETE_FENCE_RELEASE;
+
+	return adf_device_post_config(dev, &data_v2, &arg->complete_fence);
+}
+
+static int adf_device_post_config_v2(struct adf_device *dev,
+		struct adf_post_config_v2 __user *arg)
+{
+	struct adf_post_config_v2 data_v2;
+
+	if (copy_from_user(&data_v2, arg, sizeof(data_v2)))
+		return -EFAULT;
+
+	return adf_device_post_config(dev, &data_v2, &arg->complete_fence);
+}
+
 static int adf_intf_simple_post_config(struct adf_interface *intf,
-		struct adf_simple_post_config __user *arg)
+		struct adf_buffer_config __user *buf_user,
+		__s32 __user *complete_fence_user,
+		__u8 complete_fence_type)
 {
 	struct adf_device *dev = intf->base.parent;
 	struct sync_fence *complete_fence;
@@ -336,33 +410,56 @@ static int adf_intf_simple_post_config(struct adf_interface *intf,
 	struct adf_buffer buf;
 	int ret = 0;
 
-	complete_fence_fd = get_unused_fd();
-	if (complete_fence_fd < 0)
-		return complete_fence_fd;
+	ret = adf_get_complete_fence_fd(complete_fence_type,
+			&complete_fence_fd);
+	if (ret < 0)
+		return ret;
 
-	ret = adf_buffer_import(dev, &arg->buf, &buf);
+	ret = adf_buffer_import(dev, buf_user, &buf);
 	if (ret < 0)
 		goto err_import;
 
-	if (put_user(complete_fence_fd, &arg->complete_fence)) {
+	if (put_user(complete_fence_fd, complete_fence_user)) {
 		ret = -EFAULT;
 		goto err_put_user;
 	}
 
-	complete_fence = adf_interface_simple_post(intf, &buf);
+	complete_fence = adf_interface_simple_post(intf, &buf,
+			complete_fence_type);
 	if (IS_ERR(complete_fence)) {
 		ret = PTR_ERR(complete_fence);
 		goto err_put_user;
 	}
 
-	sync_fence_install(complete_fence, complete_fence_fd);
+	if (complete_fence_fd >= 0)
+		sync_fence_install(complete_fence, complete_fence_fd);
 	return 0;
 
 err_put_user:
 	adf_buffer_cleanup(&buf);
 err_import:
-	put_unused_fd(complete_fence_fd);
+	if (complete_fence_fd >= 0)
+		put_unused_fd(complete_fence_fd);
 	return ret;
+}
+
+static int adf_intf_simple_post_config_v1(struct adf_interface *intf,
+		struct adf_simple_post_config __user *arg)
+{
+	return adf_intf_simple_post_config(intf, &arg->buf,
+			&arg->complete_fence, ADF_COMPLETE_FENCE_RELEASE);
+}
+
+static int adf_intf_simple_post_config_v2(struct adf_interface *intf,
+		struct adf_simple_post_config_v2 __user *arg)
+{
+	__u8 complete_fence_type;
+
+	if (get_user(complete_fence_type, &arg->complete_fence_type))
+		return -EFAULT;
+
+	return adf_intf_simple_post_config(intf, &arg->buf,
+			&arg->complete_fence, complete_fence_type);
 }
 
 static int adf_intf_simple_buffer_alloc(struct adf_interface *intf,
@@ -634,6 +731,8 @@ static long adf_overlay_engine_ioctl(struct adf_overlay_engine *eng,
 	case ADF_SIMPLE_BUFFER_ALLOC:
 	case ADF_ATTACH:
 	case ADF_DETACH:
+	case ADF_POST_CONFIG_V2:
+	case ADF_SIMPLE_POST_CONFIG_V2:
 		return -EINVAL;
 
 	default:
@@ -661,14 +760,19 @@ static long adf_interface_ioctl(struct adf_interface *intf,
 				(struct adf_interface_data __user *)arg);
 
 	case ADF_SIMPLE_POST_CONFIG:
-		return adf_intf_simple_post_config(intf,
+		return adf_intf_simple_post_config_v1(intf,
 				(struct adf_simple_post_config __user *)arg);
+
+	case ADF_SIMPLE_POST_CONFIG_V2:
+		return adf_intf_simple_post_config_v2(intf,
+				(struct adf_simple_post_config_v2 __user *)arg);
 
 	case ADF_SIMPLE_BUFFER_ALLOC:
 		return adf_intf_simple_buffer_alloc(intf,
 				(struct adf_simple_buffer_alloc __user *)arg);
 
 	case ADF_POST_CONFIG:
+	case ADF_POST_CONFIG_V2:
 	case ADF_GET_DEVICE_DATA:
 	case ADF_GET_OVERLAY_ENGINE_DATA:
 	case ADF_ATTACH:
@@ -689,8 +793,12 @@ static long adf_device_ioctl(struct adf_device *dev, struct adf_file *file,
 				(struct adf_set_event __user *)arg);
 
 	case ADF_POST_CONFIG:
-		return adf_device_post_config(dev,
+		return adf_device_post_config_v1(dev,
 				(struct adf_post_config __user *)arg);
+
+	case ADF_POST_CONFIG_V2:
+		return adf_device_post_config_v2(dev,
+				(struct adf_post_config_v2 __user *)arg);
 
 	case ADF_GET_DEVICE_DATA:
 		return adf_device_get_data(dev,
@@ -711,6 +819,7 @@ static long adf_device_ioctl(struct adf_device *dev, struct adf_file *file,
 	case ADF_GET_INTERFACE_DATA:
 	case ADF_GET_OVERLAY_ENGINE_DATA:
 	case ADF_SIMPLE_POST_CONFIG:
+	case ADF_SIMPLE_POST_CONFIG_V2:
 	case ADF_SIMPLE_BUFFER_ALLOC:
 		return -EINVAL;
 
