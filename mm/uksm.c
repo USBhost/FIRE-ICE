@@ -877,11 +877,14 @@ static struct page *get_uksm_page(struct stable_node *stable_node,
 {
 	struct page *page;
 	void *expected_mapping;
+	unsigned long kpfn;
 
-	page = pfn_to_page(stable_node->kpfn);
+again:
+	kpfn = stable_node->kpfn;
+	page = pfn_to_page(kpfn);
 	expected_mapping = (void *)stable_node +
 				(PAGE_MAPPING_ANON | PAGE_MAPPING_KSM);
-	rcu_read_lock();
+
 	if (page->mapping != expected_mapping)
 		goto stale;
 	if (!get_page_unless_zero(page))
@@ -890,10 +893,26 @@ static struct page *get_uksm_page(struct stable_node *stable_node,
 		put_page(page);
 		goto stale;
 	}
-	rcu_read_unlock();
+
+	lock_page(page);
+	if (page->mapping != expected_mapping) {
+		unlock_page(page);
+		put_page(page);
+		goto stale;
+	}
+	unlock_page(page);
 	return page;
 stale:
-	rcu_read_unlock();
+	/*
+	 * We come here from above when page->mapping or !PageSwapCache
+	 * suggests that the node is stale; but it might be under migration.
+	 * We need smp_rmb(), matching the smp_wmb() in ksm_migrate_page(),
+	 * before checking whether node->kpfn has been changed.
+	 */
+	smp_rmb();
+	if (stable_node->kpfn != kpfn)
+		goto again;
+
 	remove_node_from_stable_tree(stable_node, unlink_rb, remove_tree_node);
 
 	return NULL;
@@ -4840,6 +4859,14 @@ void ksm_migrate_page(struct page *newpage, struct page *oldpage)
 	if (stable_node) {
 		VM_BUG_ON(stable_node->kpfn != page_to_pfn(oldpage));
 		stable_node->kpfn = page_to_pfn(newpage);
+		/*
+		 * newpage->mapping was set in advance; now we need smp_wmb()
+		 * to make sure that the new stable_node->kpfn is visible
+		 * to get_ksm_page() before it can see that oldpage->mapping
+		 * has gone stale (or that PageSwapCache has been cleared).
+		 */
+		smp_wmb();
+		set_page_stable_node(oldpage, NULL);
 	}
 }
 #endif /* CONFIG_MIGRATION */
