@@ -676,6 +676,8 @@ static int update_amp_parameter(int mode)
 {
 	if (mode >= rt5506_cfg_data.mode_num)
 		return -EINVAL;
+	if (rt5506_cfg_data.cmd_data[mode].config.reg_len > MAX_REG_DATA)
+		return -EINVAL;
 
 	pr_info("%s: set mode %d\n", __func__, mode);
 

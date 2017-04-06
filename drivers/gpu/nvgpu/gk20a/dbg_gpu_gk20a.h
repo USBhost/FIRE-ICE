@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,8 @@
 #ifndef __DBG_GPU_GK20A_H_
 #define __DBG_GPU_GK20A_H_
 #include <linux/poll.h>
+
+struct dbg_session_gk20a;
 
 /* module debug driver interface */
 int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp);
@@ -76,6 +78,8 @@ struct dbg_session_gk20a {
 	/* event support */
 	struct dbg_gpu_session_events dbg_events;
 	struct list_head dbg_s_list_node;
+
+	struct mutex ioctl_lock;
 };
 
 extern struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a;
