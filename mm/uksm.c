@@ -877,11 +877,14 @@ static struct page *get_uksm_page(struct stable_node *stable_node,
 {
 	struct page *page;
 	void *expected_mapping;
+	unsigned long kpfn;
 
-	page = pfn_to_page(stable_node->kpfn);
+again:
+	kpfn = stable_node->kpfn;
+	page = pfn_to_page(kpfn);
 	expected_mapping = (void *)stable_node +
 				(PAGE_MAPPING_ANON | PAGE_MAPPING_KSM);
-	rcu_read_lock();
+
 	if (page->mapping != expected_mapping)
 		goto stale;
 	if (!get_page_unless_zero(page))
@@ -890,10 +893,26 @@ static struct page *get_uksm_page(struct stable_node *stable_node,
 		put_page(page);
 		goto stale;
 	}
-	rcu_read_unlock();
+
+	lock_page(page);
+	if (page->mapping != expected_mapping) {
+		unlock_page(page);
+		put_page(page);
+		goto stale;
+	}
+	unlock_page(page);
 	return page;
 stale:
-	rcu_read_unlock();
+	/*
+	 * We come here from above when page->mapping or !PageSwapCache
+	 * suggests that the node is stale; but it might be under migration.
+	 * We need smp_rmb(), matching the smp_wmb() in ksm_migrate_page(),
+	 * before checking whether node->kpfn has been changed.
+	 */
+	smp_rmb();
+	if (stable_node->kpfn != kpfn)
+		goto again;
+
 	remove_node_from_stable_tree(stable_node, unlink_rb, remove_tree_node);
 
 	return NULL;
@@ -3325,6 +3344,7 @@ out2:
 	put_page(rmap_item->page);
 out1:
 	slot->pages_scanned++;
+	slot->this_sampled++;
 	if (slot->fully_scanned_round != fully_scanned_round)
 		scanned_virtual_pages++;
 
@@ -3547,6 +3567,11 @@ static inline int vma_rung_down(struct vma_slot *slot)
 static unsigned long cal_dedup_ratio(struct vma_slot *slot)
 {
 	unsigned long ret;
+	unsigned long pages;
+
+	pages = slot->this_sampled;
+	if (!pages)
+		return 0;
 
 	BUG_ON(slot->pages_scanned == slot->last_scanned);
 
@@ -3562,7 +3587,7 @@ static unsigned long cal_dedup_ratio(struct vma_slot *slot)
 		}
 	}
 
-	return ret;
+	return ret * 100 / pages;
 }
 
 /**
@@ -3571,17 +3596,13 @@ static unsigned long cal_dedup_ratio(struct vma_slot *slot)
 static unsigned long cal_dedup_ratio_old(struct vma_slot *slot)
 {
 	unsigned long ret;
-	unsigned long pages_scanned;
+	unsigned long pages;
 
-	pages_scanned = slot->pages_scanned;
-	if (!pages_scanned) {
-		if (uksm_thrash_threshold)
-			return 0;
-		else
-			pages_scanned = slot->pages_scanned;
-	}
+	pages = slot->pages;
+	if (!pages)
+		return 0;
 
-	ret = slot->pages_bemerged * 100 / pages_scanned;
+	ret = slot->pages_bemerged;
 
 	/* Thrashing area filtering */
 	if (ret && uksm_thrash_threshold) {
@@ -3593,7 +3614,7 @@ static unsigned long cal_dedup_ratio_old(struct vma_slot *slot)
 		}
 	}
 
-	return ret;
+	return ret * 100 / pages;
 }
 
 /**
@@ -4067,6 +4088,7 @@ static noinline void round_update_ladder(void)
 
 		slot->pages_bemerged = 0;
 		slot->pages_cowed = 0;
+		slot->this_sampled = 0;
 
 		list_del_init(&slot->dedup_list);
 	}
@@ -4837,6 +4859,14 @@ void ksm_migrate_page(struct page *newpage, struct page *oldpage)
 	if (stable_node) {
 		VM_BUG_ON(stable_node->kpfn != page_to_pfn(oldpage));
 		stable_node->kpfn = page_to_pfn(newpage);
+		/*
+		 * newpage->mapping was set in advance; now we need smp_wmb()
+		 * to make sure that the new stable_node->kpfn is visible
+		 * to get_ksm_page() before it can see that oldpage->mapping
+		 * has gone stale (or that PageSwapCache has been cleared).
+		 */
+		smp_wmb();
+		set_page_stable_node(oldpage, NULL);
 	}
 }
 #endif /* CONFIG_MIGRATION */
@@ -5204,8 +5234,9 @@ static ssize_t eval_intervals_store(struct kobject *kobj,
 	unsigned long values[SCAN_LADDER_SIZE];
 	struct scan_rung *rung;
 	char *p, *end = NULL;
+	ssize_t ret = count;
 
-	p = kzalloc(count, GFP_KERNEL);
+	p = kzalloc(count + 2, GFP_KERNEL);
 	if (!p)
 		return -ENOMEM;
 
@@ -5214,15 +5245,19 @@ static ssize_t eval_intervals_store(struct kobject *kobj,
 	for (i = 0; i < SCAN_LADDER_SIZE; i++) {
 		if (i != SCAN_LADDER_SIZE -1) {
 			end = strchr(p, ' ');
-			if (!end)
-				return -EINVAL;
+			if (!end) {
+				ret = -EINVAL;
+				goto out;
+			}
 
 			*end = '\0';
 		}
 
 		err = strict_strtoul(p, 10, &values[i]);
-		if (err)
-			return -EINVAL;
+		if (err) {
+			ret = -EINVAL;
+			goto out;
+		}
 
 		p = end + 1;
 	}
@@ -5233,7 +5268,9 @@ static ssize_t eval_intervals_store(struct kobject *kobj,
 		rung->cover_msecs = values[i];
 	}
 
-	return count;
+out:
+	kfree(p);
+	return ret;
 }
 UKSM_ATTR(eval_intervals);
 
