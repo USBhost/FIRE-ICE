@@ -956,5 +956,8 @@ config TOUCHSCREEN_MAX1187X
 
           If unsure, say N.
 
+config TOUCH_BOOST
+       bool "Touch Boost"
+
 source "drivers/input/touchscreen/synaptics_dsx/Kconfig"
 endif

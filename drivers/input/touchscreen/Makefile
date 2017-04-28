@@ -79,3 +79,4 @@ obj-$(CONFIG_TOUCHSCREEN_SYN_RMI4_SPI)  += rmi4/
 obj-$(CONFIG_TOUCHSCREEN_MAXIM_STI)     += maxim_sti.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX)	+= synaptics_dsx/
 obj-$(CONFIG_CYPRESS_SAR)  		+= cy8c_sar.o
+obj-$(CONFIG_TOUCH_BOOST)               += touchboost.o
