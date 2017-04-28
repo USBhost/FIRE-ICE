@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
+#include <linux/display_state.h>
 #include <linux/moduleparam.h>
 #include <linux/export.h>
 #include <linux/debugfs.h>
@@ -4041,6 +4042,16 @@ static void tegra_dsi_setup_initialized_panel(struct tegra_dc_dsi_data *dsi)
 	dsi->enabled = true;
 }
 
+static BLOCKING_NOTIFIER_HEAD(display_notifier_list);
+
+ void display_state_register_notifier(struct notifier_block *nb) {
+	 blocking_notifier_chain_register(&display_notifier_list, nb);
+ }
+
+  void display_state_unregister_notifier(struct notifier_block *nb) {
+	  blocking_notifier_chain_unregister(&display_notifier_list, nb);
+  }
+
 static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
@@ -4141,6 +4152,13 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 
 	if (dsi->out_ops && dsi->out_ops->enable)
 		dsi->out_ops->enable(dsi);
+
+#ifdef CONFIG_TEGRA_DSI_DEBUG
+	dev_printk(KERN_DEBUG, &dc->ndev->dev, "Turning on display\n");
+#endif
+
+	blocking_notifier_call_chain(&display_notifier_list, DISPLAY_ON, NULL);
+
 fail:
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
@@ -4958,6 +4976,11 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 			}
 		}
 	}
+
+#ifdef CONFIG_TEGRA_DSI_DEBUG
+	dev_printk(KERN_DEBUG, &dc->ndev->dev, "Turning off display\n");
+#endif
+	blocking_notifier_call_chain(&display_notifier_list, DISPLAY_OFF, NULL);
 fail:
 	mutex_unlock(&dsi->lock);
 	tegra_dc_io_end(dc);

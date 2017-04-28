@@ -99,6 +99,16 @@ config CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
+
+config CPU_FREQ_DEFAULT_GOV_SUBLIMEACTIVE
+  	bool "sublimeactive"
+  	select CONFIG_CPU_FREQ_GOV_SUBLIMEACTIVE
+  	select CPU_FREQ_GOV_PERFORMANCE
+  	help
+  	  Use the CPUFreq governor 'sublimeactive' as default. This allows
+  	  you to get a full dynamic frequency capable system by simply
+  	  loading your cpufreq low-level hardware driver.
+
 config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 	bool "interactive"
 	select CPU_FREQ_GOV_INTERACTIVE
@@ -283,6 +293,23 @@ config CPU_FREQ_GOV_BLU_ACTIVE
 config CPU_FREQ_GOV_WHEATLEY
 	   tristate "'wheatley' cpufreq governor"
 	   depends on CPU_FREQ
+
+config CPU_FREQ_GOV_SUBLIMEACTIVE
+	tristate "'sublimeactive' cpufreq governor"
+	depends on CPU_FREQ
+	select CPU_FREQ_GOV_COMMON
+	help
+	  'sublimeactive' - this governor is optimized for better suitability in a
+		battery powered environment.  The frequency is gracefully increased and
+		decreased rather than jumping to 100% when speed is required.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cpufreq_sublimeactive.
+
+	  For details, take a look at linux/Documentation/cpu-freq.
+
+	  If in doubt, say N.
+
 
 config GENERIC_CPUFREQ_CPU0
 	tristate "Generic CPU0 cpufreq driver"
