@@ -80,6 +80,12 @@ int rmap_walk_ksm(struct page *page, int (*rmap_one)(struct page *,
 		  struct vm_area_struct *, unsigned long, void *), void *arg);
 void ksm_migrate_page(struct page *newpage, struct page *oldpage);
 
+
+/* Mark new vma as mergeable */
+#define ALLOW	1
+#define DENY	0
+extern unsigned mark_new_vma __read_mostly;
+
 /*
  * Allow to mark new vma as VM_MERGEABLE
  */
@@ -88,6 +94,8 @@ void ksm_migrate_page(struct page *newpage, struct page *oldpage);
 #endif
 static inline void ksm_vm_flags_mod(unsigned long *vm_flags)
 {
+	if (!mark_new_vma)
+		return;
 	if (*vm_flags & (VM_MERGEABLE | VM_SHARED  | VM_MAYSHARE   |
 			 VM_PFNMAP    | VM_IO      | VM_DONTEXPAND |
 			 VM_HUGETLB | VM_NONLINEAR | VM_MIXEDMAP   | VM_SAO) )
@@ -98,7 +106,7 @@ static inline void ksm_vm_flags_mod(unsigned long *vm_flags)
 static inline void ksm_vma_add_new(struct vm_area_struct *vma)
 {
 	struct mm_struct *mm = vma->vm_mm;
-	if (!test_bit(MMF_VM_MERGEABLE, &mm->flags)) {
+	if (mark_new_vma && !test_bit(MMF_VM_MERGEABLE, &mm->flags)) {
 		__ksm_enter(mm);
 	}
 }
