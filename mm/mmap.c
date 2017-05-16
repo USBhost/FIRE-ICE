@@ -37,6 +37,7 @@
 #include <linux/notifier.h>
 #include <linux/memory.h>
 #include <linux/tegra_profiler.h>
+#include <linux/ksm.h>
 
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
@@ -892,10 +893,14 @@ again:			remove_next = 1 + (end > next->vm_end);
 			vma_gap_update(next);
 		else
 			mm->highest_vm_end = end;
+	} else {
+		if (next && !insert)
+			ksm_vma_add_new(next);
 	}
 	if (insert && file)
 		uprobe_mmap(insert);
 
+	ksm_vma_add_new(vma);
 	validate_mm(mm);
 
 	return 0;
@@ -1269,6 +1274,9 @@ unsigned long do_mmap_pgoff(struct file *file, unsigned long addr,
 	vm_flags = calc_vm_prot_bits(prot) | calc_vm_flag_bits(flags) |
 			mm->def_flags | VM_MAYREAD | VM_MAYWRITE | VM_MAYEXEC;
 
+	/* If ksm is enabled, we add VM_MERGABLE to new VMAs. */
+	ksm_vm_flags_mod(&vm_flags);
+
 	if (flags & MAP_LOCKED)
 		if (!can_do_mlock())
 			return -EPERM;
@@ -1615,6 +1623,7 @@ munmap_back:
 
 	vma_link(mm, vma, prev, rb_link, rb_parent);
 	file = vma->vm_file;
+	ksm_vma_add_new(vma);
 
 	/* Once vma denies write, undo our temporary denial count */
 	if (correct_wcount)
@@ -2478,6 +2487,8 @@ static int __split_vma(struct mm_struct * mm, struct vm_area_struct * vma,
 	else
 		err = vma_adjust(vma, vma->vm_start, addr, vma->vm_pgoff, new);
 
+	ksm_vma_add_new(vma);
+
 	/* Success. */
 	if (!err)
 		return 0;
@@ -2661,6 +2672,9 @@ static unsigned long do_brk(unsigned long addr, unsigned long len)
 			return -EAGAIN;
 	}
 
+	/* If ksm is enabled, we add VM_MERGABLE to new VMAs. */
+	ksm_vm_flags_mod(&flags);
+
 	/*
 	 * mm->mmap_sem is required to protect against another thread
 	 * changing the mappings in case we sleep.
@@ -2710,6 +2724,7 @@ static unsigned long do_brk(unsigned long addr, unsigned long len)
 	vma->vm_flags = flags;
 	vma->vm_page_prot = vm_get_page_prot(flags);
 	vma_link(mm, vma, prev, rb_link, rb_parent);
+	ksm_vma_add_new(vma);
 out:
 	perf_event_mmap(vma);
 	quadd_event_mmap(vma);
@@ -2893,6 +2908,7 @@ struct vm_area_struct *copy_vma(struct vm_area_struct **vmap,
 				new_vma->vm_ops->open(new_vma);
 			vma_link(mm, new_vma, prev, rb_link, rb_parent);
 			*need_rmap_locks = false;
+			ksm_vma_add_new(new_vma);
 		}
 	}
 	return new_vma;
@@ -2999,6 +3015,7 @@ int install_special_mapping(struct mm_struct *mm,
 
 	perf_event_mmap(vma);
 	quadd_event_mmap(vma);
+	ksm_vma_add_new(vma);
 
 	return 0;
 

@@ -80,6 +80,29 @@ int rmap_walk_ksm(struct page *page, int (*rmap_one)(struct page *,
 		  struct vm_area_struct *, unsigned long, void *), void *arg);
 void ksm_migrate_page(struct page *newpage, struct page *oldpage);
 
+/*
+ * Allow to mark new vma as VM_MERGEABLE
+ */
+#ifndef VM_SAO
+#define VM_SAO 0
+#endif
+static inline void ksm_vm_flags_mod(unsigned long *vm_flags)
+{
+	if (*vm_flags & (VM_MERGEABLE | VM_SHARED  | VM_MAYSHARE   |
+			 VM_PFNMAP    | VM_IO      | VM_DONTEXPAND |
+			 VM_HUGETLB | VM_NONLINEAR | VM_MIXEDMAP   | VM_SAO) )
+		return;
+	*vm_flags |= VM_MERGEABLE;
+}
+
+static inline void ksm_vma_add_new(struct vm_area_struct *vma)
+{
+	struct mm_struct *mm = vma->vm_mm;
+	if (!test_bit(MMF_VM_MERGEABLE, &mm->flags)) {
+		__ksm_enter(mm);
+	}
+}
+
 #else  /* !CONFIG_KSM */
 
 static inline int ksm_fork(struct mm_struct *mm, struct mm_struct *oldmm)
@@ -94,6 +117,14 @@ static inline void ksm_exit(struct mm_struct *mm)
 static inline int PageKsm(struct page *page)
 {
 	return 0;
+}
+
+static inline void ksm_vm_flags_mod(unsigned long *vm_flags_p)
+{
+}
+
+void ksm_vma_add_new(struct vm_area_struct *vma)
+{
 }
 
 #ifdef CONFIG_MMU
