@@ -26,8 +26,6 @@
 #define MAX_TOUCHBOOST_DURATION		(2000 * USEC_PER_MSEC)	// 2 sec
 #define DISPLAY_ON_SAMPLING_RATE	(15 * USEC_PER_MSEC)	// 15 ms
 #define DISPLAY_OFF_SAMPLING_RATE	(500 * USEC_PER_MSEC)	// 500 ms
-#define IGNORE_NICE_LOAD_ON		(1)
-#define IGNORE_NICE_LOAD_OFF		(0)
 #define MAX_LOAD			(100)
 #define MIN_LOAD			(11)
 
@@ -133,25 +131,21 @@ static int display_notifier(struct notifier_block *nb,
 			    unsigned long display_state, void *data)
 {
 	unsigned int sampling_rate;
-	unsigned int ignore_nice_load;
 	unsigned int cpu;
 
 	switch (display_state) {
 	case DISPLAY_ON:
 		__sa_check_cpu = sa_def_check_cpu;
 		sampling_rate = DISPLAY_ON_SAMPLING_RATE;
-		ignore_nice_load = IGNORE_NICE_LOAD_OFF;
 		break;
 
 	case DISPLAY_OFF:
 		__sa_check_cpu = sa_display_off_check_cpu;
 		sampling_rate = DISPLAY_OFF_SAMPLING_RATE;
-		ignore_nice_load = IGNORE_NICE_LOAD_ON;
 		break;
 
 	default:
 		sampling_rate = DISPLAY_ON_SAMPLING_RATE;
-		ignore_nice_load = IGNORE_NICE_LOAD_OFF;
 
 #ifdef CONFIG_TEGRA_DSI_DEBUG
 		printk(KERN_WARN "Invalid display state: %u\n", display_state);
@@ -170,7 +164,6 @@ static int display_notifier(struct notifier_block *nb,
 		struct dbs_data *const dbs_data = policy->governor_data;
 		struct sa_dbs_tuners *const sa_tuners = dbs_data->tuners;
 		sa_tuners->sampling_rate = sampling_rate;
-		sa_tuners->ignore_nice_load = ignore_nice_load;
 	}
 	return NOTIFY_OK;
 }
@@ -304,7 +297,6 @@ static int sa_init(struct dbs_data *dbs_data)
 	tuners->down_threshold = DEF_FREQ_DOWN_THRESHOLD;
 	tuners->touchboost_min_freq = DEF_TOUCHBOOST_MIN_FREQ;
 	tuners->touchboost_dur = DEF_TOUCHBOOST_DURATION;
-	tuners->ignore_nice_load = IGNORE_NICE_LOAD_OFF;
 
 	dbs_data->tuners = tuners;
 	dbs_data->min_sampling_rate = DISPLAY_ON_SAMPLING_RATE;
