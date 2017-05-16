@@ -327,6 +327,13 @@ config KSM_CHECK_PAGE
 	  This is useful in situation where you have parent and
 	  child process marking same area for KSM scanning.
 
+config KSM_MARK_NEW_VMA
+	int "Marking new vma pages as VM_MERGEABLE"
+	depends on KSM
+	default 0
+	range 0 1
+	help
+
 config DEFAULT_MMAP_MIN_ADDR
         int "Low address space to protect from user allocation"
 	depends on MMU
