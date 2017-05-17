@@ -24,6 +24,8 @@ KSM only operates on those areas of address space which an application
 has advised to be likely candidates for merging, by using the madvise(2)
 system call: int madvise(addr, length, MADV_MERGEABLE).
 
+Also KSM can mark anonymous memory as mergeable, see below.
+
 The app may call int madvise(addr, length, MADV_UNMERGEABLE) to cancel
 that advice and restore unshared pages: whereupon KSM unmerges whatever
 it merged in that range.  Note: this unmerging call may suddenly require
@@ -72,6 +74,11 @@ merge_across_nodes - specifies if pages from different numa nodes can be merged.
                    set run 2 to unmerge pages first, then to 1 after changing
                    merge_across_nodes, to remerge according to the new setting.
                    Default: 1 (merging across nodes as in earlier releases)
+
+mark_new_vma     - set 0 to disallow ksm marking every new allocated anonymous
+                   memory as mergeable.
+                   set 1 to allow ksm mark every new allocated anonymous memory
+                   as mergeable
 
 run              - set 0 to stop ksmd from running but keep merged pages,
                    set 1 to run ksmd e.g. "echo 1 > /sys/kernel/mm/ksm/run",
