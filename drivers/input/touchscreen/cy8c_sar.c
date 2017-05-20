@@ -320,7 +320,7 @@ static void sar_event_handler(struct work_struct *work)
 	spin_unlock_irqrestore(&sar_list_lock, spinlock_flags);
 	if (fppowerdown)
 		fppowerdown(active & 0x03);
-	pr_info("[SAR] active=%x\n", active);
+	pr_err("[SAR] active=%x\n", active);
 	blocking_notifier_call_chain(&sar_notifier_list, active, NULL);
 }
 
