@@ -81,12 +81,21 @@ static unsigned long lowmem_deathpending_timeout;
 			pr_info(x);			\
 	} while (0)
 
-static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
+static unsigned long lowmem_count(struct shrinker *s,
+				  struct shrink_control *sc)
+{
+	return global_page_state(NR_ACTIVE_ANON) +
+		global_page_state(NR_ACTIVE_FILE) +
+		global_page_state(NR_INACTIVE_ANON) +
+		global_page_state(NR_INACTIVE_FILE);
+}
+
+static unsigned long lowmem_scan(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
 	struct task_struct *selected = NULL;
 	struct sysinfo swap_info;
-	int rem = 0;
+	unsigned long rem = 0;
 	int tasksize;
 	int i;
 	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
@@ -115,19 +124,17 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			break;
 		}
 	}
-	if (sc->nr_to_scan > 0)
-		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %hd\n",
-				sc->nr_to_scan, sc->gfp_mask, other_free,
-				other_file, min_score_adj);
-	rem = global_page_state(NR_ACTIVE_ANON) +
-		global_page_state(NR_ACTIVE_FILE) +
-		global_page_state(NR_INACTIVE_ANON) +
-		global_page_state(NR_INACTIVE_FILE);
-	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
-		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
-			     sc->nr_to_scan, sc->gfp_mask, rem);
-		return rem;
+
+	lowmem_print(3, "lowmem_scan %lu, %x, ofree %d %d, ma %hd\n",
+			sc->nr_to_scan, sc->gfp_mask, other_free,
+			other_file, min_score_adj);
+
+	if (min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
+		lowmem_print(5, "lowmem_scan %lu, %x, return 0\n",
+			     sc->nr_to_scan, sc->gfp_mask);
+		return SHRINK_STOP;
 	}
+
 	selected_oom_score_adj = min_score_adj;
 
 	rcu_read_lock();
@@ -194,16 +201,21 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		lowmem_deathpending_timeout = jiffies + HZ;
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		send_sig(SIGKILL, selected, 0);
-		rem -= selected_tasksize;
-	}
-	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
+		rem += selected_tasksize;
+	} else {
+		rcu_read_unlock();
+		return SHRINK_STOP;
+ 	}
+
+	lowmem_print(4, "lowmem_scan %lu, %x, return %lu\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
 	rcu_read_unlock();
 	return rem;
 }
 
 static struct shrinker lowmem_shrinker = {
-	.shrink = lowmem_shrink,
+	.scan_objects = lowmem_scan,
+	.count_objects = lowmem_count,
 	.seeks = DEFAULT_SEEKS * 16
 };
 

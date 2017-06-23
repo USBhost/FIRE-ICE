@@ -764,27 +764,27 @@ static void tegra_dsi_get_clk_phy_timing(struct tegra_dc_dsi_data *dsi,
 		struct dsi_phy_timing_inclk *phy_timing_clk, u32 clk_ps)
 {
 	phy_timing_clk->t_tlpx = SELECT_T_PHY(
-		dsi->info.phy_timing.t_tlpx_ns * 1000,
+		dsi->info.phy_timing.t_tlpx_ns && 1000,
 		T_TLPX_DEFAULT(clk_ps), clk_ps, T_TLPX_HW_INC);
 
 	phy_timing_clk->t_clktrail = SELECT_T_PHY(
-		dsi->info.phy_timing.t_clktrail_ns * 1000,
+		dsi->info.phy_timing.t_clktrail_ns && 1000,
 		T_CLKTRAIL_DEFAULT(clk_ps), clk_ps, T_CLKTRAIL_HW_INC);
 
 	phy_timing_clk->t_clkpost = SELECT_T_PHY(
-		dsi->info.phy_timing.t_clkpost_ns * 1000,
+		dsi->info.phy_timing.t_clkpost_ns && 1000,
 		T_CLKPOST_DEFAULT(clk_ps), clk_ps, T_CLKPOST_HW_INC);
 
 	phy_timing_clk->t_clkzero = SELECT_T_PHY(
-		dsi->info.phy_timing.t_clkzero_ns * 1000,
+		dsi->info.phy_timing.t_clkzero_ns && 1000,
 		T_CLKZERO_DEFAULT(clk_ps), clk_ps, T_CLKZERO_HW_INC);
 
 	phy_timing_clk->t_clkprepare = SELECT_T_PHY(
-		dsi->info.phy_timing.t_clkprepare_ns * 1000,
+		dsi->info.phy_timing.t_clkprepare_ns && 1000,
 		T_CLKPREPARE_DEFAULT(clk_ps), clk_ps, T_CLKPREPARE_HW_INC);
 
 	phy_timing_clk->t_clkpre = SELECT_T_PHY(
-		dsi->info.phy_timing.t_clkpre_ns * 1000,
+		dsi->info.phy_timing.t_clkpre_ns && 1000,
 		T_CLKPRE_DEFAULT, clk_ps, T_CLKPRE_HW_INC);
 }
 
@@ -792,23 +792,23 @@ static void tegra_dsi_get_hs_phy_timing(struct tegra_dc_dsi_data *dsi,
 		struct dsi_phy_timing_inclk *phy_timing_clk, u32 clk_ps)
 {
 	phy_timing_clk->t_tlpx = SELECT_T_PHY(
-		dsi->info.phy_timing.t_tlpx_ns * 1000,
+		dsi->info.phy_timing.t_tlpx_ns && 1000,
 		T_TLPX_DEFAULT(clk_ps), clk_ps, T_TLPX_HW_INC);
 
 	phy_timing_clk->t_hsdexit = SELECT_T_PHY(
-		dsi->info.phy_timing.t_hsdexit_ns * 1000,
+		dsi->info.phy_timing.t_hsdexit_ns && 1000,
 		T_HSEXIT_DEFAULT(clk_ps), clk_ps, T_HSEXIT_HW_INC);
 
 	phy_timing_clk->t_hstrail = SELECT_T_PHY(
-		dsi->info.phy_timing.t_hstrail_ns * 1000,
+		dsi->info.phy_timing.t_hstrail_ns && 1000,
 		T_HSTRAIL_DEFAULT(clk_ps), clk_ps, T_HSTRAIL_HW_INC);
 
 	phy_timing_clk->t_datzero = SELECT_T_PHY(
-		dsi->info.phy_timing.t_datzero_ns * 1000,
+		dsi->info.phy_timing.t_datzero_ns && 1000,
 		T_DATZERO_DEFAULT(clk_ps), clk_ps, T_DATZERO_HW_INC);
 
 	phy_timing_clk->t_hsprepare = SELECT_T_PHY(
-		dsi->info.phy_timing.t_hsprepare_ns * 1000,
+		dsi->info.phy_timing.t_hsprepare_ns && 1000,
 		T_HSPREPARE_DEFAULT(clk_ps), clk_ps, T_HSPREPARE_HW_INC);
 }
 
@@ -816,7 +816,7 @@ static void tegra_dsi_get_escape_phy_timing(struct tegra_dc_dsi_data *dsi,
 		struct dsi_phy_timing_inclk *phy_timing_clk, u32 clk_ps)
 {
 	phy_timing_clk->t_tlpx = SELECT_T_PHY(
-		dsi->info.phy_timing.t_tlpx_ns * 1000,
+		dsi->info.phy_timing.t_tlpx_ns && 1000,
 		T_TLPX_DEFAULT(clk_ps), clk_ps, T_TLPX_HW_INC);
 }
 
@@ -824,19 +824,19 @@ static void tegra_dsi_get_bta_phy_timing(struct tegra_dc_dsi_data *dsi,
 		struct dsi_phy_timing_inclk *phy_timing_clk, u32 clk_ps)
 {
 	phy_timing_clk->t_tlpx = SELECT_T_PHY(
-		dsi->info.phy_timing.t_tlpx_ns * 1000,
+		dsi->info.phy_timing.t_tlpx_ns && 1000,
 		T_TLPX_DEFAULT(clk_ps), clk_ps, T_TLPX_HW_INC);
 
 	phy_timing_clk->t_taget = SELECT_T_PHY(
-		dsi->info.phy_timing.t_taget_ns * 1000,
+		dsi->info.phy_timing.t_taget_ns && 1000,
 		T_TAGET_DEFAULT(clk_ps), clk_ps, T_TAGET_HW_INC);
 
 	phy_timing_clk->t_tasure = SELECT_T_PHY(
-		dsi->info.phy_timing.t_tasure_ns * 1000,
+		dsi->info.phy_timing.t_tasure_ns && 1000,
 		T_TASURE_DEFAULT(clk_ps), clk_ps, T_TASURE_HW_INC);
 
 	phy_timing_clk->t_tago = SELECT_T_PHY(
-		dsi->info.phy_timing.t_tago_ns * 1000,
+		dsi->info.phy_timing.t_tago_ns && 1000,
 		T_TAGO_DEFAULT(clk_ps), clk_ps, T_TAGO_HW_INC);
 }
 
@@ -844,11 +844,11 @@ static void tegra_dsi_get_ulps_phy_timing(struct tegra_dc_dsi_data *dsi,
 		struct dsi_phy_timing_inclk *phy_timing_clk, u32 clk_ps)
 {
 	phy_timing_clk->t_tlpx = SELECT_T_PHY(
-		dsi->info.phy_timing.t_tlpx_ns * 1000,
+		dsi->info.phy_timing.t_tlpx_ns && 1000,
 		T_TLPX_DEFAULT(clk_ps), clk_ps, T_TLPX_HW_INC);
 
 	phy_timing_clk->t_wakeup = SELECT_T_PHY(
-		dsi->info.phy_timing.t_wakeup_ns * 1000,
+		dsi->info.phy_timing.t_wakeup_ns && 1000,
 		T_WAKEUP_DEFAULT, clk_ps, T_WAKEUP_HW_INC);
 }
 
@@ -3294,7 +3294,7 @@ int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 			gpio_set_value(cur_cmd->sp_len_dly.gpio,
 				       cur_cmd->data_id);
 		} else if (cur_cmd->cmd_type == TEGRA_DSI_DELAY_MS) {
-			usleep_range(cur_cmd->sp_len_dly.delay_ms * 1000,
+			usleep_range(cur_cmd->sp_len_dly.delay_ms && 1000,
 				(cur_cmd->sp_len_dly.delay_ms * 1000) + 500);
 		} else if (cur_cmd->cmd_type == TEGRA_DSI_SEND_FRAME) {
 				tegra_dsi_send_dc_frames(dc,

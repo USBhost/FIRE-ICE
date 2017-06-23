@@ -19,6 +19,21 @@ struct mem_cgroup;
 #ifdef CONFIG_KSM
 int ksm_madvise(struct vm_area_struct *vma, unsigned long start,
 		unsigned long end, int advice, unsigned long *vm_flags);
+int __ksm_enter(struct mm_struct *mm);
+void __ksm_exit(struct mm_struct *mm);
+
+static inline int ksm_fork(struct mm_struct *mm, struct mm_struct *oldmm)
+{
+	if (test_bit(MMF_VM_MERGEABLE, &oldmm->flags))
+		return __ksm_enter(mm);
+	return 0;
+}
+
+static inline void ksm_exit(struct mm_struct *mm)
+{
+	if (test_bit(MMF_VM_MERGEABLE, &mm->flags))
+		__ksm_exit(mm);
+}
 
 /*
  * A KSM page is one of those write-protected "shared pages" or "merged pages"
@@ -65,32 +80,36 @@ int rmap_walk_ksm(struct page *page, int (*rmap_one)(struct page *,
 		  struct vm_area_struct *, unsigned long, void *), void *arg);
 void ksm_migrate_page(struct page *newpage, struct page *oldpage);
 
-#ifdef CONFIG_KSM_LEGACY
-int __ksm_enter(struct mm_struct *mm);
-void __ksm_exit(struct mm_struct *mm);
-static inline int ksm_fork(struct mm_struct *mm, struct mm_struct *oldmm)
+
+/* Mark new vma as mergeable */
+#define ALLOW	1
+#define DENY	0
+extern unsigned mark_new_vma __read_mostly;
+
+/*
+ * Allow to mark new vma as VM_MERGEABLE
+ */
+#ifndef VM_SAO
+#define VM_SAO 0
+#endif
+static inline void ksm_vm_flags_mod(unsigned long *vm_flags)
 {
-	if (test_bit(MMF_VM_MERGEABLE, &oldmm->flags))
-		return __ksm_enter(mm);
-	return 0;
+	if (!mark_new_vma)
+		return;
+	if (*vm_flags & (VM_MERGEABLE | VM_SHARED  | VM_MAYSHARE   |
+			 VM_PFNMAP    | VM_IO      | VM_DONTEXPAND |
+			 VM_HUGETLB | VM_NONLINEAR | VM_MIXEDMAP   | VM_SAO) )
+		return;
+	*vm_flags |= VM_MERGEABLE;
 }
 
-static inline void ksm_exit(struct mm_struct *mm)
+static inline void ksm_vma_add_new(struct vm_area_struct *vma)
 {
-	if (test_bit(MMF_VM_MERGEABLE, &mm->flags))
-		__ksm_exit(mm);
+	struct mm_struct *mm = vma->vm_mm;
+	if (mark_new_vma && !test_bit(MMF_VM_MERGEABLE, &mm->flags)) {
+		__ksm_enter(mm);
+	}
 }
-
-#elif defined(CONFIG_UKSM)
-static inline int ksm_fork(struct mm_struct *mm, struct mm_struct *oldmm)
-{
-	return 0;
-}
-
-static inline void ksm_exit(struct mm_struct *mm)
-{
-}
-#endif /* !CONFIG_UKSM */
 
 #else  /* !CONFIG_KSM */
 
@@ -106,6 +125,14 @@ static inline void ksm_exit(struct mm_struct *mm)
 static inline int PageKsm(struct page *page)
 {
 	return 0;
+}
+
+static inline void ksm_vm_flags_mod(unsigned long *vm_flags_p)
+{
+}
+
+void ksm_vma_add_new(struct vm_area_struct *vma)
+{
 }
 
 #ifdef CONFIG_MMU
@@ -143,7 +170,5 @@ static inline void ksm_migrate_page(struct page *newpage, struct page *oldpage)
 }
 #endif /* CONFIG_MMU */
 #endif /* !CONFIG_KSM */
-
-#include <linux/uksm.h>
 
 #endif /* __LINUX_KSM_H */

@@ -2296,7 +2296,7 @@ static ssize_t active_show(struct device *dev, struct device_attribute *attr,
 			   char *buf)
 {
 	struct cwmcu_data *mcu_data = dev_get_drvdata(dev);
-	u32 data;
+	u32 data = 0;
 
 	CWMCU_i2c_read_power(mcu_data, CWSTM32_ENABLE_REG, &data, sizeof(data));
 

@@ -71,7 +71,7 @@ struct inode_data {
 static int sdcardfs_inode_test(struct inode *inode, void *candidate_data/*void *candidate_lower_inode*/)
 {
 	struct inode *current_lower_inode = sdcardfs_lower_inode(inode);
-	userid_t current_userid = SDCARDFS_I(inode)->userid;
+	userid_t current_userid = SDCARDFS_I(inode)->data->userid;
 
 	if (current_lower_inode == ((struct inode_data *)candidate_data)->lower_inode &&
 			current_userid == ((struct inode_data *)candidate_data)->id)
@@ -199,7 +199,8 @@ static struct dentry *__sdcardfs_interpose(struct dentry *dentry,
 
 	ret_dentry = d_splice_alias(inode, dentry);
 	dentry = ret_dentry ?: dentry;
-	update_derived_permission_lock(dentry);
+	if (!IS_ERR(dentry))
+		update_derived_permission_lock(dentry);
 out:
 	return ret_dentry;
 }
@@ -438,7 +439,8 @@ struct dentry *sdcardfs_lookup(struct inode *dir, struct dentry *dentry,
 		goto out;
 	}
 
-	ret = __sdcardfs_lookup(dentry, flags, &lower_parent_path, SDCARDFS_I(dir)->userid);
+	ret = __sdcardfs_lookup(dentry, flags, &lower_parent_path,
+				SDCARDFS_I(dir)->data->userid);
 	if (IS_ERR(ret))
 		goto out;
 	if (ret)

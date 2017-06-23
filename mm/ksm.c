@@ -223,6 +223,12 @@ static unsigned int ksm_thread_pages_to_scan = 100;
 /* Milliseconds ksmd should sleep between batches */
 static unsigned int ksm_thread_sleep_millisecs = 20;
 
+/* Mark new vma as mergeable */
+#ifndef CONFIG_KSM_MARK_NEW_VMA
+#define CONFIG_KSM_MARK_NEW_VMA DENY
+#endif
+unsigned mark_new_vma = CONFIG_KSM_MARK_NEW_VMA;
+
 #ifdef CONFIG_NUMA
 /* Zeroed when merging across nodes is not allowed */
 static unsigned int ksm_merge_across_nodes = 1;
@@ -2322,6 +2328,34 @@ static ssize_t pages_to_scan_store(struct kobject *kobj,
 }
 KSM_ATTR(pages_to_scan);
 
+static ssize_t mark_new_vma_show(struct kobject *kobj, struct kobj_attribute *attr,
+			char *buf)
+{
+	return sprintf(buf, "%u\n", mark_new_vma);
+}
+static ssize_t mark_new_vma_store(struct kobject *kobj,
+				  struct kobj_attribute *attr,
+				  const char *buf, size_t count)
+{
+	int err;
+	unsigned long flags;
+
+	err = kstrtoul(buf, 10, &flags);
+	if (err || flags > UINT_MAX || flags > ALLOW)
+		return -EINVAL;
+
+	/*
+	 * ALLOW = 1 - sets allow for mark new vma as
+	 * VM_MERGEABLE and adding it to ksm
+	 * DENY = 0 - disable it
+	 */
+	if (mark_new_vma != flags) {
+		mark_new_vma = flags;
+	}
+	return count;
+}
+KSM_ATTR(mark_new_vma);
+
 static ssize_t run_show(struct kobject *kobj, struct kobj_attribute *attr,
 			char *buf)
 {
@@ -2503,6 +2537,7 @@ static struct attribute *ksm_attrs[] = {
 	&pages_volatile_attr.attr,
 	&full_scans_attr.attr,
 	&deferred_timer_attr.attr,
+	&mark_new_vma_attr.attr,
 #ifdef CONFIG_NUMA
 	&merge_across_nodes_attr.attr,
 #endif
@@ -2539,7 +2574,9 @@ static int __init ksm_init(void)
 		goto out_free;
 	}
 #else
-	ksm_run = KSM_RUN_MERGE;	/* no way for user to start it */
+	/* no way for user to start it */
+	mark_new_vma = ALLOW;
+	ksm_run = KSM_RUN_MERGE;
 
 #endif /* CONFIG_SYSFS */
 
