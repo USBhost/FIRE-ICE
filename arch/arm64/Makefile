@@ -20,14 +20,19 @@ LIBGCC 		:= $(shell $(CC) $(KBUILD_CFLAGS) -print-libgcc-file-name)
 KBUILD_DEFCONFIG := defconfig
 
 O2_FLAGS := \
+	$(call cc-option, -ftree-loop-linear) \
+	$(call cc-option, -floop-interchange) \
+	$(call cc-option, -floop-strip-mine) \
+	$(call cc-option, -floop-block) \
+	$(call cc-option, -floop-unroll-and-jam) \
 	$(call cc-option, -fgraphite-identity) \
 	$(call cc-option, -floop-nest-optimize)
 
 O1_FLAGS := \
 	-mtune=cortex-a57 \
 	--param l1-cache-line-size=64 \
-	--param l1-cache-size=196 \
-	--param l2-cache-size=2097
+	--param l1-cache-size=64 \
+	--param l2-cache-size=2048
 
 KBUILD_CFLAGS	+= -fno-pic -pipe
 KBUILD_CFLAGS	+= -mgeneral-regs-only
