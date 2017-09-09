@@ -19,15 +19,6 @@ LIBGCC 		:= $(shell $(CC) $(KBUILD_CFLAGS) -print-libgcc-file-name)
 
 KBUILD_DEFCONFIG := defconfig
 
-O2_FLAGS := \
-	$(call cc-option, -ftree-loop-linear) \
-	$(call cc-option, -floop-interchange) \
-	$(call cc-option, -floop-strip-mine) \
-	$(call cc-option, -floop-block) \
-	$(call cc-option, -floop-unroll-and-jam) \
-	$(call cc-option, -fgraphite-identity) \
-	$(call cc-option, -floop-nest-optimize)
-
 O1_FLAGS := \
 	-mtune=cortex-a57 \
 	--param l1-cache-line-size=64 \
@@ -37,7 +28,7 @@ O1_FLAGS := \
 KBUILD_CFLAGS	+= -fno-pic -pipe
 KBUILD_CFLAGS	+= -mgeneral-regs-only
 KBUILD_CFLAGS	+= -fno-asynchronous-unwind-tables
-KBUILD_CFLAGS	+= $(O2_FLAGS) $(O1_FLAGS) 
+KBUILD_CFLAGS	+= $(O1_FLAGS) 
 ifeq ($(CONFIG_CPU_BIG_ENDIAN), y)
 KBUILD_CPPFLAGS	+= -mbig-endian
 AS		+= -EB

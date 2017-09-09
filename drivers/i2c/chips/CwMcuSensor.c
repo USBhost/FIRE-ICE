@@ -300,8 +300,8 @@ static int cw_send_event(struct cwmcu_data *mcu_data, u8 id, u16 *data,
 	u8 event[21];/* Sensor HAL uses fixed 21 bytes */
 
 	event[0] = id;
-	memcpy(&event[1], data, sizeof(u16)*3);
-	memset(&event[7], 0, sizeof(u16)*3);
+	memcpy(&event[1], data, sizeof(u16)*REPORT_EVENT_COMMON_LEN);
+	memset(&event[7], 0, sizeof(u16)*REPORT_EVENT_COMMON_LEN);
 	memcpy(&event[13], &timestamp, sizeof(s64));
 
 	D("%s: active_scan_mask = 0x%p, masklength = %u, data(x, y, z) ="
@@ -318,9 +318,8 @@ static int cw_send_event(struct cwmcu_data *mcu_data, u8 id, u16 *data,
 			iio_push_to_buffers(mcu_data->indio_dev, event);
 		else {
 			D(
-			  "%s: Drop data(0, 1, 2, 3) = "
-			  "(0x%x, 0x%x, 0x%x, 0x%x)\n", __func__,
-			  data[0], data[1], data[2], data[3]);
+			  "%s: Drop data(0, 1, 2) = (0x%x, 0x%x, 0x%x)\n",
+			  __func__, data[0], data[1], data[2]);
 		}
 		mutex_unlock(&mcu_data->mutex_lock);
 		return 0;
@@ -351,9 +350,8 @@ static int cw_send_event_special(struct cwmcu_data *mcu_data, u8 id, u16 *data,
 			iio_push_to_buffers(mcu_data->indio_dev, event);
 		else {
 			D(
-			  "%s: Drop data(0, 1, 2, 3) = "
-			  "(0x%x, 0x%x, 0x%x, 0x%x)\n", __func__,
-			  data[0], data[1], data[2], data[3]);
+			  "%s: Drop data(0, 1, 2) = (0x%x, 0x%x, 0x%x)\n",
+			  __func__, data[0], data[1], data[2]);
 		}
 		mutex_unlock(&mcu_data->mutex_lock);
 		return 0;
@@ -775,7 +773,7 @@ static ssize_t get_k_value_acc_f(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
 	struct cwmcu_data *mcu_data = dev_get_drvdata(dev);
-	u8 data[ACC_CALIBRATOR_LEN];
+	u8 data[ACC_CALIBRATOR_LEN] = {0};
 
 	return get_k_value(mcu_data, CW_ACCELERATION, buf, data, sizeof(data));
 }
@@ -825,7 +823,7 @@ static ssize_t get_k_value_mag_f(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
 	struct cwmcu_data *mcu_data = dev_get_drvdata(dev);
-	u8 data[MAG_CALIBRATOR_LEN];
+	u8 data[MAG_CALIBRATOR_LEN] = {0};
 
 	return get_k_value(mcu_data, CW_MAGNETIC, buf, data, sizeof(data));
 }
@@ -834,7 +832,7 @@ static ssize_t get_k_value_gyro_f(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
 	struct cwmcu_data *mcu_data = dev_get_drvdata(dev);
-	u8 data[GYRO_CALIBRATOR_LEN];
+	u8 data[GYRO_CALIBRATOR_LEN] = {0};
 
 	return get_k_value(mcu_data, CW_GYRO, buf, data, sizeof(data));
 }
@@ -857,7 +855,7 @@ static ssize_t get_k_value_barometer_f(struct device *dev,
 				       struct device_attribute *attr, char *buf)
 {
 	struct cwmcu_data *mcu_data = dev_get_drvdata(dev);
-	u8 data[PRESSURE_CALIBRATOR_LEN];
+	u8 data[PRESSURE_CALIBRATOR_LEN] = {0};
 
 	return get_k_value(mcu_data, CW_PRESSURE, buf, data, sizeof(data));
 }
@@ -2468,7 +2466,7 @@ static ssize_t batch_set(struct device *dev,
 	kfree(str_buf);
 
 	if ((sensors_id < 0) || (sensors_id >= num_sensors)) {
-		D("%s: Invalid sensors_id = %ld\n", __func__, sensors_id);
+		D("%s: Invalid sensors_id = %d\n", __func__, sensors_id);
 		return -EINVAL;
 	}
 
@@ -2695,8 +2693,8 @@ static bool report_iio(struct cwmcu_data *mcu_data, int *i, u8 *data,
 {
 	s32 ret;
 	u8 data_buff;
-	u16 data_event[REPORT_EVENT_COMMON_LEN];
-	u16 bias_event[REPORT_EVENT_COMMON_LEN];
+	u16 data_event[REPORT_EVENT_COMMON_LEN] = {0};
+	u16 bias_event[REPORT_EVENT_COMMON_LEN] = {0};
 	u16 timestamp_event;
 	u64 *handle_time_base;
 	bool is_meta_read = false;
@@ -2854,7 +2852,6 @@ static bool report_iio(struct cwmcu_data *mcu_data, int *i, u8 *data,
 		if ((data[0] == CW_MAGNETIC) || (data[0] == CW_ORIENTATION)) {
 			int rc;
 			u8 accuracy;
-			u16 bias_event[REPORT_EVENT_COMMON_LEN] = {0};
 
 			rc = CWMCU_i2c_read(mcu_data,
 					    CW_I2C_REG_SENSORS_ACCURACY_MAG,
@@ -4121,7 +4118,7 @@ static void cwmcu_one_shot(struct work_struct *work)
 
 	if (mcu_data->w_report_meta == true) {
 		int j;
-		u16 data_event[REPORT_EVENT_COMMON_LEN];
+		u16 data_event[REPORT_EVENT_COMMON_LEN] = {0};
 
 		mcu_data->w_report_meta = false;
 
